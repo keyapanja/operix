@@ -1,0 +1,753 @@
+// Operix — Phase 1 data model
+// PostgreSQL + Prisma. Multi-tenant: every tenant-owned row carries companyId.
+// Money is stored in integer minor units (paise). Timestamps are UTC.
+// See docs/architecture.md for the reasoning behind these choices.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  SUPER_ADMIN
+  HR_MANAGER
+  PROJECT_MANAGER
+  TEAM_LEAD
+  EMPLOYEE
+  CLIENT
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+enum ProbationStatus {
+  ON_PROBATION
+  CONFIRMED
+}
+
+enum EmployeeDocType {
+  OFFER_LETTER
+  NDA
+  ID_PROOF
+  CERTIFICATE
+  OTHER
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  COMPLETED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AttendanceType {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+  HOLIDAY
+}
+
+enum ApprovalStatus {
+  PENDING
+  MANAGER_APPROVED
+  HR_APPROVED
+  REJECTED
+  APPROVED // generic terminal-approved (e.g. timesheet single-step)
+}
+
+enum LeavePaidType {
+  PAID
+  UNPAID
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  LOCKED
+  PAID
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum DeliverableStatus {
+  SUBMITTED
+  APPROVED
+  REVISION_REQUESTED
+}
+
+// ============================================================
+// TENANT + ORGANIZATION (Module 1)
+// ============================================================
+
+model Company {
+  id           String   @id @default(cuid())
+  name         String
+  logoKey      String?
+  address      String?
+  timezone     String   @default("Asia/Kolkata")
+  currency     String   @default("INR")
+  businessType String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users         User[]
+  departments   Department[]
+  teams         Team[]
+  designations  Designation[]
+  workShifts    WorkShift[]
+  employees     Employee[]
+  projects      Project[]
+  clients       Client[]
+  leaveTypes    LeaveType[]
+  payrollRuns   PayrollRun[]
+  kbCategories  KbCategory[]
+  ptSlabs       ProfessionalTaxSlab[]
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  headId    String?  // Employee who heads the department
+  createdAt DateTime @default(now())
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  head      Employee?  @relation("DeptHead", fields: [headId], references: [id])
+  teams     Team[]
+  employees Employee[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model Team {
+  id           String   @id @default(cuid())
+  companyId    String
+  departmentId String?
+  name         String
+  createdAt    DateTime @default(now())
+
+  company    Company     @relation(fields: [companyId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+  employees  Employee[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model Designation {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  employees Employee[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model WorkShift {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  startTime String // "09:00" local to company tz
+  endTime   String // "18:00"
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  employees Employee[]
+
+  @@index([companyId])
+}
+
+// ============================================================
+// AUTH + RBAC (Module 13)
+// ============================================================
+
+model User {
+  id           String   @id @default(cuid())
+  companyId    String
+  email        String
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  // Exactly one of these is set depending on role:
+  employeeId   String?  @unique // internal users
+  clientId     String?          // CLIENT role -> portal scope
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  company       Company        @relation(fields: [companyId], references: [id])
+  employee      Employee?      @relation(fields: [employeeId], references: [id])
+  client        Client?        @relation(fields: [clientId], references: [id])
+  notifications Notification[]
+
+  @@unique([companyId, email])
+  @@index([companyId])
+}
+
+// ============================================================
+// EMPLOYEES (Module 2)
+// ============================================================
+
+model Employee {
+  id              String           @id @default(cuid())
+  companyId       String
+  employeeCode    String
+  fullName        String
+  email           String
+  phone           String?
+  photoKey        String?
+  dateOfBirth     DateTime?
+  joiningDate     DateTime
+  departmentId    String?
+  teamId          String?
+  designationId   String?
+  managerId       String? // self-referential reporting line
+  workShiftId     String?
+  employmentType  EmploymentType   @default(FULL_TIME)
+  probationStatus ProbationStatus  @default(ON_PROBATION)
+  workLocation    String?
+  deletedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  company        Company           @relation(fields: [companyId], references: [id])
+  department     Department?       @relation(fields: [departmentId], references: [id])
+  team           Team?             @relation(fields: [teamId], references: [id])
+  designation    Designation?      @relation(fields: [designationId], references: [id])
+  workShift      WorkShift?        @relation(fields: [workShiftId], references: [id])
+  manager        Employee?         @relation("Reports", fields: [managerId], references: [id])
+  reports        Employee[]        @relation("Reports")
+  headedDepts    Department[]      @relation("DeptHead")
+  user           User?
+
+  documents      EmployeeDocument[]
+  emergencyContacts EmergencyContact[]
+  capacity       EmployeeCapacity?
+  attendance     Attendance[]
+  leaveRequests  LeaveRequest[]
+  leaveBalances  LeaveBalance[]
+  timeEntries    TimeEntry[]
+  tasks          Task[]            @relation("Assignee")
+  salaryStructures SalaryStructure[]
+  payslips       Payslip[]
+
+  @@unique([companyId, employeeCode])
+  @@index([companyId])
+  @@index([managerId])
+}
+
+model EmployeeDocument {
+  id         String          @id @default(cuid())
+  employeeId String
+  type       EmployeeDocType
+  fileKey    String
+  fileName   String
+  uploadedAt DateTime        @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+}
+
+model EmergencyContact {
+  id           String @id @default(cuid())
+  employeeId   String
+  name         String
+  relationship String?
+  phone        String
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+}
+
+// ============================================================
+// RESOURCE ALLOCATION (Module 4)
+// ============================================================
+
+model EmployeeCapacity {
+  id            String @id @default(cuid())
+  employeeId    String @unique
+  dailyHours    Float  @default(8)
+  weeklyHours   Float  @default(40)
+  monthlyHours  Float  @default(160)
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+// ============================================================
+// PROJECTS & TASKS (Module 3)
+// ============================================================
+
+model Project {
+  id          String        @id @default(cuid())
+  companyId   String
+  clientId    String?
+  name        String
+  description String?
+  startDate   DateTime?
+  dueDate     DateTime?
+  priority    Priority      @default(MEDIUM)
+  status      ProjectStatus @default(PLANNING)
+  deletedAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  client       Client?       @relation(fields: [clientId], references: [id])
+  tasks        Task[]
+  milestones   Milestone[]
+  timeEntries  TimeEntry[]
+  deliverables Deliverable[]
+
+  @@index([companyId])
+  @@index([clientId])
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  projectId    String
+  parentTaskId String? // subtask
+  name         String
+  description  String?
+  assigneeId   String?
+  dueDate      DateTime?
+  priority     Priority   @default(MEDIUM)
+  status       TaskStatus @default(TODO)
+  milestoneId  String?
+  orderIndex   Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  project      Project          @relation(fields: [projectId], references: [id])
+  parent       Task?            @relation("Subtasks", fields: [parentTaskId], references: [id])
+  subtasks     Task[]           @relation("Subtasks")
+  assignee     Employee?        @relation("Assignee", fields: [assigneeId], references: [id])
+  milestone    Milestone?       @relation(fields: [milestoneId], references: [id])
+  checklist    ChecklistItem[]
+  comments     Comment[]
+  attachments  Attachment[]
+  timeEntries  TimeEntry[]
+  dependsOn    TaskDependency[] @relation("Dependent")
+  dependents   TaskDependency[] @relation("Prerequisite")
+
+  @@index([projectId])
+  @@index([assigneeId])
+}
+
+model TaskDependency {
+  id           String @id @default(cuid())
+  taskId       String // the dependent task
+  dependsOnId  String // the prerequisite task
+
+  task      Task @relation("Dependent", fields: [taskId], references: [id])
+  dependsOn Task @relation("Prerequisite", fields: [dependsOnId], references: [id])
+
+  @@unique([taskId, dependsOnId])
+}
+
+model ChecklistItem {
+  id        String  @id @default(cuid())
+  taskId    String
+  text      String
+  isDone    Boolean @default(false)
+  orderIndex Int    @default(0)
+
+  task Task @relation(fields: [taskId], references: [id])
+
+  @@index([taskId])
+}
+
+model Milestone {
+  id        String    @id @default(cuid())
+  projectId String
+  name      String
+  dueDate   DateTime?
+  reachedAt DateTime?
+
+  project Project @relation(fields: [projectId], references: [id])
+  tasks   Task[]
+
+  @@index([projectId])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  taskId     String
+  authorId   String // userId
+  body       String
+  createdAt  DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id])
+
+  @@index([taskId])
+}
+
+// Polymorphic attachment: belongs to a task (extendable to project/deliverable later)
+model Attachment {
+  id         String   @id @default(cuid())
+  taskId     String?
+  fileKey    String
+  fileName   String
+  mimeType   String?
+  sizeBytes  Int?
+  uploadedBy String // userId
+  createdAt  DateTime @default(now())
+
+  task Task? @relation(fields: [taskId], references: [id])
+
+  @@index([taskId])
+}
+
+// ============================================================
+// ATTENDANCE (Module 5)
+// ============================================================
+
+model Attendance {
+  id         String         @id @default(cuid())
+  companyId  String
+  employeeId String
+  date       DateTime       @db.Date
+  type       AttendanceType @default(PRESENT)
+  clockIn    DateTime?
+  clockOut   DateTime?
+  location   String?
+  createdAt  DateTime       @default(now())
+
+  employee Employee        @relation(fields: [employeeId], references: [id])
+  breaks   AttendanceBreak[]
+
+  @@unique([employeeId, date])
+  @@index([companyId, date])
+}
+
+model AttendanceBreak {
+  id           String    @id @default(cuid())
+  attendanceId String
+  breakStart   DateTime
+  breakEnd     DateTime?
+
+  attendance Attendance @relation(fields: [attendanceId], references: [id])
+
+  @@index([attendanceId])
+}
+
+// ============================================================
+// LEAVE (Module 6)
+// ============================================================
+
+model LeaveType {
+  id           String        @id @default(cuid())
+  companyId    String
+  name         String // Casual, Sick, Paid, Unpaid
+  paidType     LeavePaidType @default(PAID)
+  annualQuota  Float         @default(0)
+
+  company   Company        @relation(fields: [companyId], references: [id])
+  requests  LeaveRequest[]
+  balances  LeaveBalance[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model LeaveBalance {
+  id           String @id @default(cuid())
+  employeeId   String
+  leaveTypeId  String
+  year         Int
+  total        Float
+  used         Float  @default(0)
+
+  employee  Employee  @relation(fields: [employeeId], references: [id])
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+
+  @@unique([employeeId, leaveTypeId, year])
+}
+
+model LeaveRequest {
+  id              String         @id @default(cuid())
+  companyId       String
+  employeeId      String
+  leaveTypeId     String
+  startDate       DateTime       @db.Date
+  endDate         DateTime       @db.Date
+  days            Float
+  reason          String?
+  status          ApprovalStatus @default(PENDING)
+  managerApprovedById String?
+  hrApprovedById  String?
+  decidedAt       DateTime?
+  createdAt       DateTime       @default(now())
+
+  employee  Employee  @relation(fields: [employeeId], references: [id])
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+
+  @@index([companyId])
+  @@index([employeeId])
+}
+
+// ============================================================
+// TIMESHEET (Module 7)
+// ============================================================
+
+model TimeEntry {
+  id            String         @id @default(cuid())
+  companyId     String
+  employeeId    String
+  projectId     String
+  taskId        String?
+  date          DateTime       @db.Date
+  hours         Float
+  notes         String?
+  status        ApprovalStatus @default(PENDING)
+  approvedById  String?
+  createdAt     DateTime       @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  project  Project  @relation(fields: [projectId], references: [id])
+  task     Task?    @relation(fields: [taskId], references: [id])
+
+  @@index([companyId])
+  @@index([employeeId, date])
+}
+
+// ============================================================
+// PAYROLL (Module 8) — India statutory. Money in paise (Int).
+// ============================================================
+
+model SalaryStructure {
+  id                String   @id @default(cuid())
+  employeeId        String
+  effectiveFrom     DateTime @db.Date
+  // Earnings (monthly, in paise)
+  basic             Int
+  hra               Int      @default(0)
+  specialAllowance  Int      @default(0)
+  // Fixed recurring components; variable ones (bonus/incentive) entered per run
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+}
+
+model PayrollRun {
+  id              String           @id @default(cuid())
+  companyId       String
+  periodYear      Int
+  periodMonth     Int // 1-12
+  status          PayrollRunStatus @default(DRAFT)
+  totalCostPaise  Int              @default(0)
+  processedCount  Int              @default(0)
+  lockedAt        DateTime?
+  createdAt       DateTime         @default(now())
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  payslips Payslip[]
+
+  @@unique([companyId, periodYear, periodMonth])
+  @@index([companyId])
+}
+
+model Payslip {
+  id            String   @id @default(cuid())
+  payrollRunId  String
+  employeeId    String
+  // Frozen snapshots so historical payslips never change on recompute:
+  earnings      Json // [{ code, label, amountPaise }]
+  deductions    Json // [{ code, label, amountPaise }] incl. PF/ESI/PT
+  grossPaise    Int
+  totalDeductionPaise Int
+  netPaise      Int
+  ratesSnapshot Json // PF%, ESI%, PT slab applied
+  pdfKey        String?
+  createdAt     DateTime @default(now())
+
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id])
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+
+  @@unique([payrollRunId, employeeId])
+  @@index([employeeId])
+}
+
+// Professional Tax is state-specific slab data, kept as config (not hardcoded).
+model ProfessionalTaxSlab {
+  id            String @id @default(cuid())
+  companyId     String
+  state         String
+  minGrossPaise Int
+  maxGrossPaise Int? // null = no upper bound
+  taxPaise      Int
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, state])
+}
+
+// ============================================================
+// CLIENTS & PORTAL (Modules 9 & 10)
+// ============================================================
+
+model Client {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  companyName String?
+  email       String?
+  phone       String?
+  address     String?
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  company  Company         @relation(fields: [companyId], references: [id])
+  contacts ClientContact[]
+  projects Project[]
+  users    User[] // CLIENT-role portal logins
+
+  @@index([companyId])
+}
+
+model ClientContact {
+  id       String @id @default(cuid())
+  clientId String
+  name     String
+  email    String?
+  phone    String?
+
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@index([clientId])
+}
+
+model Deliverable {
+  id          String            @id @default(cuid())
+  projectId   String
+  name        String
+  fileKey     String?
+  status      DeliverableStatus @default(SUBMITTED)
+  feedback    String?
+  submittedAt DateTime          @default(now())
+  decidedAt   DateTime?
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([projectId])
+}
+
+// ============================================================
+// KNOWLEDGE BASE (Module 11)
+// ============================================================
+
+model KbCategory {
+  id        String @id @default(cuid())
+  companyId String
+  name      String
+
+  company  Company     @relation(fields: [companyId], references: [id])
+  articles KbArticle[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model KbArticle {
+  id         String   @id @default(cuid())
+  companyId  String
+  categoryId String
+  title      String
+  body       String // current rich-text (HTML/JSON)
+  keywords   String?
+  authorId   String // userId
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category KbCategory          @relation(fields: [categoryId], references: [id])
+  versions KbArticleVersion[]
+
+  @@index([companyId])
+  @@index([categoryId])
+}
+
+model KbArticleVersion {
+  id        String   @id @default(cuid())
+  articleId String
+  title     String
+  body      String
+  editorId  String // userId
+  createdAt DateTime @default(now())
+
+  article KbArticle @relation(fields: [articleId], references: [id])
+
+  @@index([articleId])
+}
+
+// ============================================================
+// NOTIFICATIONS (cross-cutting)
+// ============================================================
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  type      String // TASK_ASSIGNED, LEAVE_APPROVED, PAYROLL_GENERATED, ...
+  title     String
+  body      String?
+  channel   NotificationChannel @default(IN_APP)
+  isRead    Boolean             @default(false)
+  meta      Json? // entity ids for deep-linking
+  createdAt  DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+}
+
+// ============================================================
+// ACTIVITY LOG (generalized task activity timeline)
+// ============================================================
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  companyId  String
+  actorId    String // userId
+  entityType String // "TASK", "PROJECT", "LEAVE_REQUEST", ...
+  entityId   String
+  action     String // "CREATED", "STATUS_CHANGED", ...
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, entityType, entityId])
+}
