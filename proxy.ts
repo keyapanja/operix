@@ -43,7 +43,11 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  // Forward the path so server layouts can run path-aware checks (e.g. the
+  // employee punch-in gate) without re-parsing the URL.
+  const headers = new Headers(req.headers);
+  headers.set("x-pathname", pathname);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

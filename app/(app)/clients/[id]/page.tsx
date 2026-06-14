@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { humanizeEnum, formatDate } from "@/lib/format";
 import { PROJECT_STATUS_TONE } from "@/lib/status";
 import { ContactForm } from "@/components/clients/contact-form";
+import { BackLink } from "@/components/ui/back-link";
 
 export const metadata: Metadata = { title: "Client · Operix" };
 
@@ -36,9 +37,7 @@ export default async function ClientDetailPage({
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-4">
-        <Link href="/clients" className="text-sm text-muted hover:text-content">
-          ← Back to clients
-        </Link>
+        <BackLink href="/clients">Back to clients</BackLink>
       </div>
 
       <Card className="mb-6 p-6">

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/ui/back-link";
 import { requirePage } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -76,9 +76,7 @@ export default async function EmployeeDetailPage({
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-4">
-        <Link href="/employees" className="text-sm text-muted hover:text-content">
-          ← Back to employees
-        </Link>
+        <BackLink href="/employees">Back to employees</BackLink>
       </div>
 
       {/* Header */}

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { TasksTable, type TaskRow } from "@/components/tasks/tasks-table";
+import { getActiveTimers } from "@/lib/timer/data";
 
 export const metadata: Metadata = { title: "Tasks · Operix" };
 
@@ -27,16 +28,25 @@ export default async function TasksPage() {
     },
   });
 
-  const rows: TaskRow[] = tasks.map((t) => ({
-    id: t.id,
-    name: t.name,
-    projectName: t.project.name,
-    serviceName: t.service?.name ?? null,
-    status: t.status,
-    priority: t.priority,
-    assigneeNames: t.assignees.map((a) => a.employee.fullName),
-    dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
-  }));
+  const timers = session.employeeId ? await getActiveTimers(session.employeeId) : [];
+  const timerMap = new Map(timers.map((tm) => [tm.taskId, tm]));
+
+  const rows: TaskRow[] = tasks.map((t) => {
+    const tm = timerMap.get(t.id);
+    return {
+      id: t.id,
+      name: t.name,
+      projectName: t.project.name,
+      serviceName: t.service?.name ?? null,
+      status: t.status,
+      priority: t.priority,
+      assigneeNames: t.assignees.map((a) => a.employee.fullName),
+      dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
+      timer: tm
+        ? { status: tm.status, baseSeconds: tm.baseSeconds, runStartedAtMs: tm.runStartedAtMs }
+        : { status: "NONE" as const, baseSeconds: 0, runStartedAtMs: null },
+    };
+  });
 
   return (
     <>
@@ -52,7 +62,7 @@ export default async function TasksPage() {
           </Link>
         }
       />
-      <TasksTable rows={rows} />
+      <TasksTable rows={rows} canTrack={!!session.employeeId} />
     </>
   );
 }

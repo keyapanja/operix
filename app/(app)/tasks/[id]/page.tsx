@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/ui/back-link";
 import { requirePage } from "@/lib/auth/guard";
 import { hasPermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db";
@@ -104,9 +104,7 @@ export default async function TaskDetailPage({
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-4">
-        <Link href={`/projects/${task.project.id}`} className="text-sm text-muted hover:text-content">
-          ← {task.project.name}
-        </Link>
+        <BackLink href={`/projects/${task.project.id}`}>{task.project.name}</BackLink>
       </div>
 
       <Card className="mb-6 p-6">

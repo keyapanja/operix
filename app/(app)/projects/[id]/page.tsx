@@ -10,6 +10,7 @@ import { PRIORITY_TONE } from "@/lib/status";
 import { KanbanBoard } from "@/components/projects/kanban-board";
 import { ProjectStatusControl } from "@/components/projects/project-status";
 import { ProjectServices } from "@/components/projects/project-services";
+import { BackLink } from "@/components/ui/back-link";
 import type { KanbanTask } from "@/lib/projects/actions";
 
 export const metadata: Metadata = { title: "Project · Operix" };
@@ -78,9 +79,7 @@ export default async function ProjectDetailPage({
   return (
     <div>
       <div className="mb-4">
-        <Link href="/projects" className="text-sm text-muted hover:text-content">
-          ← Back to projects
-        </Link>
+        <BackLink href="/projects">Back to projects</BackLink>
       </div>
 
       <Card className="mb-6 p-6">

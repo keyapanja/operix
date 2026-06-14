@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getSession } from "@/lib/auth/session";
 import { listPermissions } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db";
 import { getActiveTimers } from "@/lib/timer/data";
+import { hasPunchedInToday } from "@/lib/attendance/gate";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { TimerBar } from "@/components/timer/timer-bar";
+import { PunchInBanner } from "@/components/attendance/punch-banner";
 
 export default async function AppLayout({
   children,
@@ -14,6 +17,16 @@ export default async function AppLayout({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
+
+  // Base employees must clock in before reaching anything but the dashboard.
+  let needsPunchIn = false;
+  if (session.role === "EMPLOYEE" && session.employeeId) {
+    needsPunchIn = !(await hasPunchedInToday(session.employeeId, session.companyId));
+    if (needsPunchIn) {
+      const pathname = (await headers()).get("x-pathname") ?? "";
+      if (pathname && pathname !== "/dashboard") redirect("/dashboard");
+    }
+  }
 
   const [allowed, notifications, unread] = await Promise.all([
     listPermissions(session.companyId, session.role),
@@ -37,6 +50,7 @@ export default async function AppLayout({
           notifications={notifications}
           unread={unread}
         />
+        {needsPunchIn && <PunchInBanner />}
         <main className="flex-1 overflow-y-auto px-6 py-8">
           <div className="animate-rise mx-auto max-w-7xl">{children}</div>
         </main>

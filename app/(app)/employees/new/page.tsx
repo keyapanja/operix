@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { requirePage } from "@/lib/auth/guard";
+import { BackLink } from "@/components/ui/back-link";
 import { prisma } from "@/lib/db";
 import { nextEmployeeCode } from "@/lib/employees/code";
 import { PageHeader } from "@/components/ui/page-header";
@@ -36,9 +36,7 @@ export default async function NewEmployeePage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-4">
-        <Link href="/employees" className="text-sm text-muted hover:text-content">
-          ← Back to employees
-        </Link>
+        <BackLink href="/employees">Back to employees</BackLink>
       </div>
       <PageHeader title="Add employee" description="Create a new employee record. They'll get an email to set their password." />
       <EmployeeForm

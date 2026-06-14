@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { requirePage } from "@/lib/auth/guard";
+import { BackLink } from "@/components/ui/back-link";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { ProjectForm } from "@/components/projects/project-form";
@@ -26,9 +26,7 @@ export default async function NewProjectPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-4">
-        <Link href="/projects" className="text-sm text-muted hover:text-content">
-          ← Back to projects
-        </Link>
+        <BackLink href="/projects">Back to projects</BackLink>
       </div>
       <PageHeader title="New project" description="Create a project to track delivery." />
       <ProjectForm clients={clients} services={services} />

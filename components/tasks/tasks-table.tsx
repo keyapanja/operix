@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icons";
 import { Combobox } from "@/components/ui/combobox";
 import { humanizeEnum, formatDate } from "@/lib/format";
+import { InlineTimer } from "@/components/timer/inline-timer";
+import type { TimerStatusUI } from "@/lib/timer/shared";
 
 export type TaskRow = {
   id: string;
@@ -18,6 +20,7 @@ export type TaskRow = {
   priority: Priority;
   assigneeNames: string[];
   dueDate: string | null;
+  timer: { status: TimerStatusUI; baseSeconds: number; runStartedAtMs: number | null };
 };
 
 const STATUS_FILTER = [
@@ -28,7 +31,7 @@ const STATUS_FILTER = [
   { value: "COMPLETED", label: "Completed" },
 ];
 
-export function TasksTable({ rows }: { rows: TaskRow[] }) {
+export function TasksTable({ rows, canTrack }: { rows: TaskRow[]; canTrack: boolean }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
@@ -90,6 +93,7 @@ export function TasksTable({ rows }: { rows: TaskRow[] }) {
             <th className="px-5 py-3">Priority</th>
             <th className="px-5 py-3">Due</th>
             <th className="px-5 py-3">Assignees</th>
+            {canTrack && <th className="px-5 py-3 text-right">Timer</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -102,11 +106,23 @@ export function TasksTable({ rows }: { rows: TaskRow[] }) {
               <td className="px-5 py-3"><Badge tone={PRIORITY_TONE[r.priority]}>{humanizeEnum(r.priority)}</Badge></td>
               <td className="px-5 py-3 text-muted">{r.dueDate ? formatDate(r.dueDate) : "—"}</td>
               <td className="px-5 py-3 text-muted">{r.assigneeNames.length ? r.assigneeNames.join(", ") : "—"}</td>
+              {canTrack && (
+                <td className="px-5 py-3">
+                  <div className="flex justify-end">
+                    <InlineTimer
+                      taskId={r.id}
+                      status={r.timer.status}
+                      baseSeconds={r.timer.baseSeconds}
+                      runStartedAtMs={r.timer.runStartedAtMs}
+                    />
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
           {pageRows.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted">No tasks match your filters.</td>
+              <td colSpan={canTrack ? 8 : 7} className="px-5 py-12 text-center text-sm text-muted">No tasks match your filters.</td>
             </tr>
           )}
         </tbody>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { requirePage } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
@@ -23,9 +23,7 @@ export default async function NewTaskPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-4">
-        <Link href="/tasks" className="text-sm text-muted hover:text-content">
-          ← Back to tasks
-        </Link>
+        <BackLink href="/tasks">Back to tasks</BackLink>
       </div>
       <PageHeader title="New task" description="Create a task under a project." />
       <NewTaskForm

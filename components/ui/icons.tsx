@@ -23,6 +23,7 @@ const paths: Record<string, string> = {
   pause: "M15.75 5.25v13.5m-7.5-13.5v13.5",
   stop: "M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z",
   chevronLeft: "M15.75 19.5 8.25 12l7.5-7.5",
+  arrowLeft: "M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18",
   chevronRight: "M8.25 4.5l7.5 7.5-7.5 7.5",
   chevronDown: "M19.5 8.25l-7.5 7.5-7.5-7.5",
   userGroup:
