@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { getCompanyTimezone } from "@/lib/cache";
 import { nowInZone, dateAtUTC } from "@/lib/dates";
 
 /**
@@ -18,11 +19,11 @@ async function bankRun(
     : 0;
   if (runSeconds <= 0) return 0;
 
-  const [company, user] = await Promise.all([
-    prisma.company.findUnique({ where: { id: companyId }, select: { timezone: true } }),
+  const [tz, user] = await Promise.all([
+    getCompanyTimezone(companyId),
     prisma.user.findUnique({ where: { id: userId }, select: { employeeId: true } }),
   ]);
-  const date = dateAtUTC(nowInZone(company?.timezone ?? "Asia/Kolkata").dateISO);
+  const date = dateAtUTC(nowInZone(tz).dateISO);
   const hours = runSeconds / 3600;
   const existing = await prisma.timeEntry.findFirst({
     where: { userId, taskId, date, status: "PENDING" },

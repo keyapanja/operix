@@ -19,17 +19,13 @@ export default async function AppLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  // Base employees must clock in before reaching anything but the dashboard.
-  let needsPunchIn = false;
-  if (session.role === "EMPLOYEE" && session.employeeId) {
-    needsPunchIn = !(await hasPunchedInToday(session.employeeId, session.companyId));
-    if (needsPunchIn) {
-      const pathname = (await headers()).get("x-pathname") ?? "";
-      if (pathname && pathname !== "/dashboard") redirect("/dashboard");
-    }
-  }
+  const isGatedEmployee = session.role === "EMPLOYEE" && !!session.employeeId;
 
-  const [allowed, notifications, unread] = await Promise.all([
+  // One parallel batch for the whole shell instead of several sequential queries.
+  const [needsPunchIn, allowed, notifications, unread, activeTimers] = await Promise.all([
+    isGatedEmployee
+      ? hasPunchedInToday(session.employeeId!, session.companyId).then((p) => !p)
+      : Promise.resolve(false),
     listPermissions(session.companyId, session.role),
     prisma.notification.findMany({
       where: { userId: session.userId },
@@ -38,8 +34,14 @@ export default async function AppLayout({
       select: { id: true, title: true, body: true, type: true, meta: true, createdAt: true },
     }),
     prisma.notification.count({ where: { userId: session.userId, isRead: false } }),
+    getActiveTimers(session.userId),
   ]);
-  const activeTimers = await getActiveTimers(session.userId);
+
+  // Base employees must clock in before reaching anything but the dashboard.
+  if (needsPunchIn) {
+    const pathname = (await headers()).get("x-pathname") ?? "";
+    if (pathname && pathname !== "/dashboard") redirect("/dashboard");
+  }
 
   const notes: ClientNote[] = notifications.map((n) => ({
     id: n.id,

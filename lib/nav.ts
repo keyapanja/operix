@@ -50,6 +50,19 @@ export const NAV: NavItem[] = [
     ],
   },
   {
+    label: "Reports",
+    href: "/reports",
+    icon: "chart",
+    action: "report:view",
+    children: [
+      { label: "Time & Utilization", href: "/reports/time", icon: "clock", action: "report:view" },
+      { label: "Projects", href: "/reports/projects", icon: "briefcase", action: "report:view" },
+      { label: "People", href: "/reports/people", icon: "users", action: "report:view" },
+      { label: "Attendance", href: "/reports/attendance", icon: "calendar", action: "report:view" },
+      { label: "Leave", href: "/reports/leave", icon: "calendarDays", action: "report:view" },
+    ],
+  },
+  {
     label: "Clients",
     href: "/clients",
     icon: "userGroup",
@@ -69,7 +82,6 @@ export const NAV: NavItem[] = [
 
 // Planned modules shown as disabled hints so the roadmap is visible in the UI.
 export const NAV_SOON: NavItem[] = [
-  { label: "Timesheets", href: "#", icon: "clock" },
   { label: "Payroll", href: "#", icon: "chart" },
   { label: "Knowledge Base", href: "#", icon: "book" },
 ];

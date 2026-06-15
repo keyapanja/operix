@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { hasPermission } from "@/lib/auth/permissions";
 import { nowInZone, dateAtUTC, timeHHMM } from "@/lib/dates";
+import { getCompanyTimezone } from "@/lib/cache";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icons";
 import { PunchCard } from "@/components/attendance/punch-card";
@@ -24,14 +25,13 @@ export default async function DashboardPage() {
     | { in: string | null; out: string | null; tz: string; shiftStart: string | null; grace: number }
     | null = null;
   if (session.employeeId) {
-    const [company, employee] = await Promise.all([
-      prisma.company.findUnique({ where: { id: session.companyId }, select: { timezone: true } }),
+    const [tz, employee] = await Promise.all([
+      getCompanyTimezone(session.companyId),
       prisma.employee.findUnique({
         where: { id: session.employeeId },
         select: { workShift: { select: { startTime: true, graceMinutes: true } } },
       }),
     ]);
-    const tz = company?.timezone ?? "Asia/Kolkata";
     const { dateISO } = nowInZone(tz);
     const att = await prisma.attendance.findUnique({
       where: { employeeId_date: { employeeId: session.employeeId, date: dateAtUTC(dateISO) } },

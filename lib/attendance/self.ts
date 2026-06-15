@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
+import { getCompanyTimezone } from "@/lib/cache";
 import { dateAtUTC, combineDateTimeUTC, nowInZone } from "@/lib/dates";
 
 export type PunchState = { error?: string; ok?: boolean; time?: string };
@@ -12,14 +13,10 @@ export type PunchState = { error?: string; ok?: boolean; time?: string };
 async function context() {
   const session = await getSession();
   if (!session?.employeeId) return null;
-  const company = await prisma.company.findUnique({
-    where: { id: session.companyId },
-    select: { timezone: true },
-  });
   return {
     companyId: session.companyId,
     employeeId: session.employeeId,
-    tz: company?.timezone ?? "Asia/Kolkata",
+    tz: await getCompanyTimezone(session.companyId),
   };
 }
 

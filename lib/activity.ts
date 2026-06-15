@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { getActorLabel } from "@/lib/cache";
 
 /** Append a human-readable entry to a task's (or any entity's) change history. */
 export async function logActivity(opts: {
@@ -40,9 +41,5 @@ export async function logTaskActivity(
 
 /** Best-effort display label for the current user (employee name, else email). */
 export async function actorLabel(userId: string): Promise<string> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { email: true, employee: { select: { fullName: true } } },
-  });
-  return user?.employee?.fullName ?? user?.email ?? "Someone";
+  return getActorLabel(userId);
 }
