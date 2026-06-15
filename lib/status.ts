@@ -39,8 +39,8 @@ export const PRIORITY_TONE: Record<Priority, Tone> = {
 export const TASK_COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: "TODO", label: "To Do" },
   { status: "IN_PROGRESS", label: "In Progress" },
-  { status: "REDO", label: "Redo" },
   { status: "REVIEW", label: "Review" },
   { status: "CLIENT_REVIEW", label: "Client Review" },
   { status: "COMPLETED", label: "Completed" },
+  { status: "REDO", label: "Redo" },
 ];

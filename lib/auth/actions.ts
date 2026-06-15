@@ -67,7 +67,8 @@ export async function loginAction(
     clientId: user.clientId,
   });
 
-  redirect("/dashboard");
+  // Clients land in their portal; everyone else in the internal app.
+  redirect(user.role === "CLIENT" ? "/portal" : "/dashboard");
 }
 
 export async function logoutAction(): Promise<void> {

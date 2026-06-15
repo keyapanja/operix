@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 // Next 16 renamed the "middleware" convention to "proxy". Same request/response
-// API — this gates every page on a valid session cookie at the edge.
+// API — this gates every page on a valid session cookie at the edge, and keeps
+// the two audiences hard-separated: clients live entirely under /portal, staff
+// never see it. (Server Actions still re-check ownership; the proxy is only the
+// first line — see lib/auth/guard.ts requirePortal + per-action clientId checks.)
 
 const COOKIE_NAME = "operix_session";
 const PUBLIC_PATHS = ["/login", "/set-password"];
@@ -11,36 +14,62 @@ function secret(): Uint8Array {
   return new TextEncoder().encode(process.env.AUTH_SECRET ?? "");
 }
 
-async function hasValidSession(req: NextRequest): Promise<boolean> {
+type Claims = { role: string; clientId: string | null };
+
+async function readSession(req: NextRequest): Promise<Claims | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
-  if (!token) return false;
+  if (!token) return null;
   try {
-    await jwtVerify(token, secret());
-    return true;
+    const { payload } = await jwtVerify(token, secret());
+    return {
+      role: (payload.role as string) ?? "",
+      clientId: (payload.clientId as string | null) ?? null,
+    };
   } catch {
-    return false;
+    return null;
   }
 }
+
+const homeFor = (role: string) => (role === "CLIENT" ? "/portal" : "/dashboard");
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-  const authed = await hasValidSession(req);
+  const session = await readSession(req);
 
-  // Unauthenticated → bounce to login (preserve intended destination)
-  if (!authed && !isPublic) {
+  // Unauthenticated → bounce to login (preserve intended destination).
+  if (!session && !isPublic) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     if (pathname !== "/") url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Already authenticated → keep them out of the login page
-  if (authed && isPublic) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
-    return NextResponse.redirect(url);
+  if (session) {
+    const isClient = session.role === "CLIENT";
+    const isPortalPath = pathname === "/portal" || pathname.startsWith("/portal/");
+
+    // Authenticated on a public page → send to the right home.
+    if (isPublic) {
+      const url = req.nextUrl.clone();
+      url.pathname = homeFor(session.role);
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+
+    // Hard isolation: clients are confined to /portal; staff are kept out of it.
+    if (isClient && !isPortalPath) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/portal";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    if (!isClient && isPortalPath) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
 
   // Forward the path so server layouts can run path-aware checks (e.g. the

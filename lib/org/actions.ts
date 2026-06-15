@@ -169,6 +169,52 @@ export async function setMultiLocation(value: boolean): Promise<ActionState> {
   return { ok: true };
 }
 
+// ---- Company profile ------------------------------------------------------
+const CompanyInfoSchema = z.object({
+  name: z.string().trim().min(1, "Company name is required").max(120),
+  tagline: z.string().trim().max(120).optional().or(z.literal("")),
+  logoUrl: z.string().trim().url("Enter a valid logo image URL").max(500).optional().or(z.literal("")),
+  businessType: z.string().trim().max(80).optional().or(z.literal("")),
+  website: z.string().trim().url("Enter a valid website URL").max(200).optional().or(z.literal("")),
+  email: z.string().trim().email("Enter a valid email").max(200).optional().or(z.literal("")),
+  phone: z.string().trim().max(40).optional().or(z.literal("")),
+  address: z.string().trim().max(300).optional().or(z.literal("")),
+});
+
+export type CompanyInfoInput = {
+  name: string;
+  tagline?: string;
+  logoUrl?: string;
+  businessType?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+};
+
+export async function updateCompanyInfo(input: CompanyInfoInput): Promise<ActionState> {
+  const session = await requireCapability("org:manage");
+  const parsed = CompanyInfoSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  const d = parsed.data;
+  await prisma.company.update({
+    where: { id: session.companyId },
+    data: {
+      name: d.name,
+      tagline: d.tagline || null,
+      logoUrl: d.logoUrl || null,
+      businessType: d.businessType || null,
+      website: d.website || null,
+      email: d.email || null,
+      phone: d.phone || null,
+      address: d.address || null,
+    },
+  });
+  revalidatePath(ORG);
+  revalidatePath("/", "layout"); // company name/tagline appear in the sidebar
+  return { ok: true };
+}
+
 // ---- Probation periods ----------------------------------------------------
 const MonthsSchema = z.object({
   months: z.coerce.number().int().min(1, "Enter a number of months").max(36),

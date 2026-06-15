@@ -23,3 +23,27 @@ export async function requireCapability(action: Action): Promise<SessionUser> {
   }
   return session;
 }
+
+/** Session guaranteed to be a CLIENT-role user scoped to a client. */
+export type PortalSession = SessionUser & { clientId: string };
+
+/**
+ * For client-portal pages: requires a CLIENT-role user with a clientId.
+ * Returns the session narrowed so clientId is non-null — every portal query
+ * scopes to it. Non-clients are bounced to the internal app.
+ */
+export async function requirePortal(): Promise<PortalSession> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (session.role !== "CLIENT" || !session.clientId) redirect("/dashboard");
+  return session as PortalSession;
+}
+
+/** For portal server actions: throws instead of redirecting. */
+export async function requirePortalAction(): Promise<PortalSession> {
+  const session = await getSession();
+  if (!session || session.role !== "CLIENT" || !session.clientId) {
+    throw new Error("Not authorized");
+  }
+  return session as PortalSession;
+}

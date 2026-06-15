@@ -22,15 +22,6 @@ export type NavItem = {
 // Only modules built so far are linked. More land as later slices ship.
 export const NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
-  { label: "Notifications", href: "/notifications", icon: "bell" },
-  { label: "Calendar", href: "/calendar", icon: "calendarDays", action: "self:service" },
-  {
-    label: "Leave",
-    href: "/leave",
-    icon: "calendar",
-    action: "self:service",
-    children: [{ label: "Apply for leave", href: "/leave?apply=1", action: "self:service" }],
-  },
   {
     label: "Projects",
     href: "/projects",
@@ -83,6 +74,15 @@ export const NAV: NavItem[] = [
     children: [{ label: "New employee", href: "/employees/new", action: "employee:manage" }],
   },
   { label: "Attendance", href: "/attendance", icon: "clock", action: "attendance:manage" },
+  { label: "Notifications", href: "/notifications", icon: "bell" },
+  { label: "Calendar", href: "/calendar", icon: "calendarDays", action: "self:service" },
+  {
+    label: "Leave",
+    href: "/leave",
+    icon: "calendar",
+    action: "self:service",
+    children: [{ label: "Apply for leave", href: "/leave?apply=1", action: "self:service" }],
+  },
   { label: "Organization", href: "/organization", icon: "building", action: "org:manage" },
 ];
 

@@ -56,6 +56,21 @@ export function ApplyForm({
   const singleDay = !!start && start === end;
   const selected = useMemo(() => balances.find((b) => b.typeId === typeId), [balances, typeId]);
 
+  const requestedDays = useMemo(() => {
+    if (!start || !end) return 0;
+    const s = Date.parse(start);
+    const e = Date.parse(end);
+    if (Number.isNaN(s) || Number.isNaN(e) || e < s) return 0;
+    if (singleDay && half) return 0.5;
+    return Math.round((e - s) / 86_400_000) + 1;
+  }, [start, end, singleDay, half]);
+
+  const periodWord = selected?.period === "MONTH" ? "month" : "year";
+  const exhausted = kind === "LEAVE" && !!selected && selected.remaining <= 0;
+  const overBalance =
+    kind === "LEAVE" && !!selected && requestedDays > 0 && requestedDays > selected.remaining;
+  const blocked = exhausted || overBalance;
+
   const form = (
     <form action={formAction} className="space-y-4">
       {state.error && (
@@ -99,9 +114,8 @@ export function ApplyForm({
                 options={balances.map((b) => ({ value: b.typeId, label: b.name }))}
               />
               {selected && (
-                <p className="mt-1.5 text-xs font-medium text-accent-strong">
-                  {selected.remaining} of {selected.allowance} days remaining
-                  {" "}(per {selected.period === "MONTH" ? "month" : "year"})
+                <p className={cn("mt-1.5 text-xs font-medium", exhausted ? "text-red-600 dark:text-red-400" : "text-accent-strong")}>
+                  {selected.remaining} of {selected.allowance} days remaining (per {periodWord})
                 </p>
               )}
             </Field>
@@ -140,8 +154,16 @@ export function ApplyForm({
         </Field>
       </Fragment>
 
+      {blocked && selected && (
+        <div className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/25">
+          {exhausted
+            ? `You've used all your ${selected.name} for this ${periodWord} — you can't apply for this leave type.`
+            : `This request is ${requestedDays} day(s), but only ${selected.remaining} day(s) of ${selected.name} remain.`}
+        </div>
+      )}
+
       <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending || blocked}>
           {pending ? "Submitting…" : "Submit request"}
         </Button>
       </div>

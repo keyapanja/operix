@@ -38,7 +38,22 @@ export default async function OrganizationPage() {
       }),
       prisma.location.findMany({ where, orderBy: { name: "asc" }, select: { id: true, name: true } }),
       prisma.probationPeriod.findMany({ where, orderBy: { months: "asc" }, select: { id: true, months: true } }),
-      prisma.company.findUnique({ where: { id: session.companyId }, select: { multiLocation: true } }),
+      prisma.company.findUnique({
+        where: { id: session.companyId },
+        select: {
+          multiLocation: true,
+          eventReminderEnabled: true,
+          eventReminderTime: true,
+          name: true,
+          tagline: true,
+          logoUrl: true,
+          businessType: true,
+          website: true,
+          email: true,
+          phone: true,
+          address: true,
+        },
+      }),
     ]);
 
   const canManageRoles = await hasPermission(session.companyId, session.role, "roles:manage");
@@ -52,6 +67,16 @@ export default async function OrganizationPage() {
         description="Departments, services, designations, shifts, locations, and probation settings."
       />
       <OrgTabs
+        company={{
+          name: company?.name ?? "",
+          tagline: company?.tagline ?? null,
+          logoUrl: company?.logoUrl ?? null,
+          businessType: company?.businessType ?? null,
+          website: company?.website ?? null,
+          email: company?.email ?? null,
+          phone: company?.phone ?? null,
+          address: company?.address ?? null,
+        }}
         departments={departments}
         services={services.map((s) => ({
           id: s.id,
@@ -64,6 +89,10 @@ export default async function OrganizationPage() {
         locations={locations}
         probationPeriods={probationPeriods}
         multiLocation={company?.multiLocation ?? false}
+        eventReminder={{
+          enabled: company?.eventReminderEnabled ?? false,
+          time: company?.eventReminderTime ?? "09:00",
+        }}
         accessMatrix={accessMatrix}
         taskScopes={taskScopes}
       />

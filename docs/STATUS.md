@@ -1,66 +1,60 @@
 # Operix — Build Status Snapshot
 
-Compact current-state reference (compresses the long build session). See
-`docs/architecture.md` for rationale and `docs/roadmap.md` for the original plan.
-_Last updated: 2026-06-15._
+Compact current-state reference. See `docs/architecture.md` for rationale,
+`docs/roadmap.md` for the original plan, and **`docs/SESSION-2026-06-15.md`** for
+the most recent session's detailed change log + handoff.
+_Last updated: 2026-06-15 (end of the portal/UX/notifications session)._
 
 ## Stack (as built)
 - **Next.js 16** (App Router, Turbopack) · **TypeScript** strict · **Tailwind v4**
-- **Prisma 6.19.3** (pinned — Prisma 7 moved DB URLs to a config file) · **PostgreSQL on Supabase** (shared dev DB with real data — `db:push` only, never `db:seed`)
-- **Auth:** hand-rolled `jose` JWT in an httpOnly cookie (not NextAuth) + set-password invite flow
-- **Email:** `nodemailer` SMTP — **Gmail configured in `.env` and verified sending**; falls back to console logging if `SMTP_HOST` is unset
-- **UI:** custom primitives — searchable `Combobox`, themed `DatePicker`, `Modal` + right **offcanvas drawer** (portaled to body); emerald/teal palette; full **light + dark** theme (`.dark` class, no-flash script); **collapsible sidebar** (rail) with **accordion sub-menus**
+- **Prisma 6.19.3** (pinned — Prisma 7 moved DB URLs to a config file) · **PostgreSQL on Supabase**
+  - **DB is in Mumbai (`aws-1-ap-south-1`), session pooler on port 5432** (not the 6543 transaction pooler — session pooler is ~30ms/query and correct for a persistent server). Migrated from the old Sydney DB this build; old DB kept for rollback.
+  - **Shared DB with real data → `db:push` only, never `db:seed`.**
+- **Auth:** hand-rolled `jose` JWT in an httpOnly cookie (not NextAuth) + set-password invite flow. Session carries `userId, companyId, role, email, employeeId, clientId`.
+- **Email:** `nodemailer` SMTP — Gmail configured in `.env` and verified sending; falls back to console logging if `SMTP_HOST` is unset.
+- **UI:** custom primitives — searchable `Combobox`, themed `DatePicker`, `Modal` + right offcanvas drawer, `Avatar` (image/initials + status dot); emerald/teal palette; full light + dark theme; collapsible sidebar with accordion sub-menus. Main content max width **1600px**.
 
 ## Modules live (all build-verified: `tsc` green)
-- **Auth/RBAC** — login, logout, `proxy.ts` route guard, `/set-password`. **Dynamic permissions**: `RolePermission` table, `lib/auth/permissions.ts` resolves per-company (defaults from `lib/auth/can.ts`), **Organization → Access** matrix; Super Admin always full.
-- **Dashboard** — role-aware; managers see stats, employees see the **punch in/out** card (live timer, shift **grace time**, late flag). Punching in now **auto-refreshes** (lifts the gate/banner without a manual reload).
-- **Organization** — departments, teams/services, **department-wise designations**, work shifts (graceMinutes), **locations** (single/multi toggle), **probation periods**, Access matrix, **Task access** (per-role task visibility).
-- **Employees** — directory, create (auto `EMP###`), **edit**, profile, emergency contacts, **email invite + resend**, account status.
-- **Attendance** — admin daily grid (search / sort / per-page / pagination), self-service punch, **leave sync** (`markedManually` override), holiday banner, **late detection → notifications**.
-- **Leave** — types with allowance **per month/year**; self-service **apply** (live balance, **half-day**, **WFH**, Employee→Manager→HR approval); adaptive page.
-- **Calendar** — `/calendar` for everyone: holidays, who's away (leave/WFH), announcements; **click/drag dates** → modal to apply leave / add holiday / post announcement.
-- **Projects** — list with progress, create, detail with **drag-and-drop Kanban** + list view.
-- **Tasks** — full **review workflow** (To Do → In Progress → Review → Redo → Client Review → Completed); **Kanban + List**; create form with **inline assignees (multi, primary pre-filled) + checklist** (seeded from service template); checklists, comments (@-mentions), per-user **timers**. **Role-based visibility** (ALL / TEAM / OWN) enforced at the query level + sidebar filters (My tasks / Assigned by me) + admin department/service filters.
-- **Time tracking** — per-task/per-user stopwatch; **pause is non-destructive** (banks to timesheet, keeps a PAUSED row), so the **global bottom bar** shows running + paused timers and supports **pause/resume from any page**; finalized (removed) when the task leaves a timeable state.
-- **Clients** — list, contacts, project mapping; sidebar "New client" deep-link auto-opens the add form.
-- **Notifications** — live topbar bell → **right offcanvas drawer**; dedicated **`/notifications` page** filterable by **color-coded category** (Tasks/Mentions/Attendance/Leave/Payroll/Clients/General); linked in drawer + left sidebar. Events that fire today: task workflow, @-mentions, late login.
+- **Auth/RBAC** — login, logout, `proxy.ts` route guard (now **role-aware**: CLIENT → `/portal`, staff → app), `/set-password`. Dynamic permissions (`RolePermission` table, `lib/auth/permissions.ts`, **Organization → Access** matrix); Super Admin always full.
+- **Dashboard** — role-aware; punch in/out card (live timer, shift grace, late flag, auto-refresh on punch-in).
+- **Organization** — single **Company** tab (company profile: name/tagline/**logo**/business type/website/email/phone/address → name+tagline+logo show in the sidebar footer; plus work shifts, locations [single/multi toggle, add-form hidden when single+already-set], probation periods, **day-before reminder setting**), Departments, Services, Designations, Access matrix, Task access. Sections are single-box (form + table in one card).
+- **Employees** — directory, create/edit, profile, emergency contacts, email invite + resend.
+- **User profiles** — `/profile` (self: nickname, avatar URL, bio) + `/people/[id]` (anyone can view) with an **Active/Away badge** from attendance (punched-in-not-out). Avatar + "My profile" in the topbar.
+- **Attendance** — admin daily grid (search/sort/paginate). Status is **display-only badge**; a **＋/✏️ "Log attendance" modal** sets status + in/out; editing a **self-logged** record first asks for confirmation. Self-service punch, leave sync, holiday banner, late detection → notifications.
+- **Leave** — types (allowance per month/year); self-service apply (live balance, **submit disabled + warning when category exhausted/over-balance**, half-day, WFH, Employee→Manager→HR approval). **Notifications**: apply → approvers; approve/reject → employee.
+- **Calendar** — holidays, who's away, announcements; click/drag a date → modal to apply leave / add holiday / post announcement. Posting an announcement **fans a notification to everyone**; optional **day-before reminders** for holidays + announcements (org-configurable time).
+- **Projects** — list with progress, create (Services picker has a **search box**), detail with drag-and-drop Kanban + list. Internal project detail has a **Deliverables** panel (publish link-based deliverables for client review).
+- **Tasks** — review workflow; Kanban (**column order: To Do → In Progress → Review → Client Review → Completed → Redo**) + List with **per-row Edit/Delete actions**; inline assignees + checklist; comments (@-mentions); per-user timers; role-based visibility. `deleteTask` now cleans up all child rows.
+- **Time tracking** — per-task/user stopwatch, non-destructive pause, global bottom bar, pause/resume anywhere.
+- **Clients** — list, contacts, project mapping, **"Portal access" invite** (creates a CLIENT login + emails the set-password link).
+- **Knowledge Base** (Module 11) — guides scoped to **Project → Department → Service**, editable by everyone, full change log (who/when), **hand-rolled WYSIWYG editor** (contentEditable → Markdown, XSS-safe). Tasks show a **"Related guides"** card matching their project+service (project-specific first).
+- **Reports** — read-only analytics (Time & Utilization, Projects, People, Attendance, Leave) with custom date ranges, multi-color charts, XLS/CSV/PDF export.
+- **Notifications** — topbar bell → right drawer; `/notifications` page filterable by color-coded category (Tasks / Mentions / Attendance / Leave / **Announcements** / Payroll / Clients / General). Events firing: task workflow, @-mentions, late login, **leave apply/approve/reject**, **announcement posted**, **deliverable approve/revision**, **holiday/announcement day-before reminders**.
+
+### Client Portal (Module 10) — Phase 1 built, client-side walkthrough pending
+- Isolated `/portal` segment (own minimal layout); proxy confines CLIENT to `/portal/*` and staff out of it; `requirePortal()` guard; every query scoped to `clientId` in `lib/portal/data.ts`.
+- Client invites from the Clients page; overview + projects + project detail (progress-only — no assignees/time/cost); approve/request-changes on **CLIENT_REVIEW tasks**; approve/request-revision on **link-based deliverables**; decisions notify the internal team.
+- **Not yet live-verified on the client side** (needs a real CLIENT login — see SESSION doc). Internal side (invite UI, deliverables panel, staff redirect) is verified.
 
 ## Key conventions / decisions
-- **Multi-tenant**: every tenant row carries `companyId`; services scope by it.
-- **Times**: stored as naive company-local wall-clock; displayed **12-hour**; "today" uses **company timezone** (`nowInZone`).
-- **Money**: integer paise (for future payroll).
-- **All dropdowns** must be the searchable `Combobox`.
-- **Task visibility**: scope per role (`ALL`/`TEAM`/`OWN`) stored as namespaced `task:scope:*` rows in `RolePermission` (no schema change; ignored by capability resolution). `TEAM` = same department. Defaults: Admin/PM/HR = ALL, Team Lead = TEAM, Employee = OWN.
-- **Notifications**: taxonomy + colors + deep-links in `lib/notifications/categories.ts` (isomorphic).
+- **Multi-tenant**: every tenant row carries `companyId`; all queries scope by it. **Portal/server actions re-check ownership** — the proxy is only the first line.
+- **No UI libraries** — charts, Markdown renderer, combobox, datepicker, modal, and the WYSIWYG editor are all hand-rolled. KB/profile/logo "images" are **URL-based** until Phase-2 file storage lands.
+- **Times**: company-local wall-clock; 12-hour display; "today" via company timezone (`nowInZone`).
+- **Money**: integer paise.
+- **Notifications**: taxonomy + colors + deep-links in `lib/notifications/categories.ts` (isomorphic). Fan-out helpers: `lib/calendar/reminders.ts` (`notifyAllInternal`), per-domain inline helpers in the relevant `actions.ts`.
+- **Task visibility**: per-role scope (`ALL`/`TEAM`/`OWN`) as namespaced `task:scope:*` rows in `RolePermission`.
 
 ## Pending / what's left
-**Not-started spec modules**
-- **Resource Allocation** (Module 4) — schema only; no capacity vs. assigned-hours / utilization.
-- **Timesheet** (Module 7) — only timer→TimeEntry logging exists; no daily/weekly/monthly views or **manager approval**.
-- **Payroll** (Module 8) — schema only; India statutory PF/ESI/PT, salary structures, runs, payslip PDFs.
-- **Client Portal** (Module 10) — schema + CLIENT role exist; no portal routes/UI.
-- **Knowledge Base** (Module 11) — schema only.
-- **Reporting & Analytics** (Module 12) — only basic dashboard counts.
-
-**Foundational infra (each unblocks several modules)**
-- **File uploads (S3/presigned)** — unwired; blocks employee docs, task attachments, payslip PDFs, deliverables, logo.
-- **Scheduled jobs / cron** — none; late-check is on-demand; needed for proactive notifications + payroll runs.
-- **Notification events + email channel** — UI is built; most domain events (leave approve/reject, task due, payroll) don't emit yet, and email delivery is wired only for invites.
+- **Client Portal** — client-side live walkthrough + hard-isolation tests (needs a test CLIENT login). Phase 2 = real file deliverables/uploads.
+- **Form Builder** (planned next phase) — drag-drop custom forms for clients/employees (referral/feedback/service-selection/POSH), JSON storage, form-data reports. Build current work to not conflict (see the user memory note).
+- **File uploads (S3 / Supabase Storage, presigned)** — still unwired; blocks real avatars/logos, employee docs, task attachments, payslip PDFs, file-based deliverables.
+- **Scheduled jobs / cron** — none in-app. Day-before reminders + late-check are **lazy triggers** (fire on the first page load past the time). Exact-time delivery + payroll runs need a real scheduler.
+- **Resource Allocation (4), Timesheet views/approval (7), Payroll (8)** — schema only / partial.
 - **Automated tests** — none (isolation/permission tests especially).
-
-**Finishing touches on shipped modules**
-- Attendance: break tracking (schema only), monthly attendance calendar view.
-- Tasks: subtasks / dependencies / milestones (schema only); Calendar & Timeline views.
-- Edit screens: work shifts, leave types, clients, company settings (create+delete only).
-- Org/Employees: department-head assignment; employee deactivate (only soft-delete); document upload (stubbed).
-- Leave: approve/reject notifications.
-
-**Decisions to confirm**
-- Payroll: TDS/income-tax in scope? overtime policy? leave accrual (annual grant vs monthly)?
-- Task scope: keep "team" = department, or switch to reporting line?
+- Finishing touches: edit screens for work shifts / leave types / clients; attendance break tracking + monthly view; subtasks/dependencies/milestones; profile-link entry points (task assignees, directory).
 
 ## Workflow caveats (Windows)
-- Dev server runs on **port 3000**; a 2nd `next dev` is blocked by Next's single-server guard.
-- **Renaming an exported symbol** trips a Turbopack stale-module error → **restart the dev server** after such changes.
-- `prisma generate` may hit a harmless `EPERM` (engine DLL locked by the running dev server) but **types still update**; restart the dev server to load the new client at runtime.
-- Schema changes need `npm run db:push` then a dev-server restart. **Never `db:seed`** — the Supabase DB is shared and holds real data.
+- Dev server on **port 3000**; restart it after **schema changes** (`npm run db:push`) and after **renaming/removing an exported symbol** (Turbopack stale-module error).
+- `prisma generate` may EPERM while the dev server holds the engine DLL — **stop the dev server before `db:push`**, then restart.
+- Preview tooling: full-page **screenshots often time out** (dev-tools overlay) → verify via accessibility/DOM `eval`; the preview viewport **resets narrow on server restart** → `preview_resize` to ~1680 for desktop checks.
+- Auto-mode classifier **blocks creating external accounts / sending real emails** (e.g. client portal invites) — those need explicit user setup.

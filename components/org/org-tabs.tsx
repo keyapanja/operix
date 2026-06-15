@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
@@ -10,6 +11,7 @@ import { DeleteButton } from "@/components/org/delete-button";
 import { ServiceList } from "@/components/org/service-list";
 import { PermissionsMatrix } from "@/components/org/permissions-matrix";
 import { TaskScopeMatrix } from "@/components/org/task-scope-matrix";
+import { CompanyInfoForm, type CompanyInfo } from "@/components/org/company-info-form";
 import {
   createDepartment,
   createService,
@@ -19,6 +21,7 @@ import {
   createProbationPeriod,
   setMultiLocation,
 } from "@/lib/org/actions";
+import { setEventReminder } from "@/lib/calendar/actions";
 import { cn } from "@/lib/cn";
 
 type Dept = { id: string; name: string };
@@ -33,9 +36,10 @@ type Shift = { id: string; name: string; startTime: string; endTime: string; gra
 type Loc = { id: string; name: string };
 type Prob = { id: string; months: number };
 
-const BASE_TABS = ["Departments", "Services", "Designations", "Shifts", "Locations", "Probation"];
+const BASE_TABS = ["Company", "Departments", "Services", "Designations"];
 
 export function OrgTabs({
+  company,
   departments,
   services,
   designations,
@@ -43,9 +47,11 @@ export function OrgTabs({
   locations,
   probationPeriods,
   multiLocation,
+  eventReminder,
   accessMatrix,
   taskScopes,
 }: {
+  company: CompanyInfo;
   departments: Dept[];
   services: Svc[];
   designations: Desig[];
@@ -53,10 +59,11 @@ export function OrgTabs({
   locations: Loc[];
   probationPeriods: Prob[];
   multiLocation: boolean;
+  eventReminder: { enabled: boolean; time: string };
   accessMatrix: Record<string, string[]> | null;
   taskScopes: Record<string, string> | null;
 }) {
-  const [tab, setTab] = useState<string>("Departments");
+  const [tab, setTab] = useState<string>("Company");
   const deptOptions = departments.map((d) => ({ value: d.id, label: d.name }));
   const tabs = [...BASE_TABS];
   if (accessMatrix) tabs.push("Access");
@@ -80,6 +87,79 @@ export function OrgTabs({
           </button>
         ))}
       </div>
+
+      {tab === "Company" && (
+        <div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-2">
+          <CompanyInfoForm company={company} />
+
+          <div className="space-y-8">
+          <div>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-faint">Work shifts</h3>
+            <Section
+              title="Work shifts"
+              headers={["Name", "Timing", "Grace", ""]}
+              empty="No shifts yet."
+              form={
+                <AddForm action={createShift}>
+                  <Field label="Shift name" htmlFor="shift-name" className="min-w-48">
+                    <Input id="shift-name" name="name" placeholder="e.g. General" required />
+                  </Field>
+                  <Field label="Start" htmlFor="shift-start" className="w-40">
+                    <Input id="shift-start" name="startTime" type="time" defaultValue="09:00" required />
+                  </Field>
+                  <Field label="End" htmlFor="shift-end" className="w-40">
+                    <Input id="shift-end" name="endTime" type="time" defaultValue="18:00" required />
+                  </Field>
+                  <Field label="Grace (min)" htmlFor="shift-grace" className="w-32" hint="On-time window">
+                    <Input id="shift-grace" name="graceMinutes" type="number" min={0} max={180} defaultValue={0} />
+                  </Field>
+                </AddForm>
+              }
+              rows={shifts.map((s) => ({
+                id: s.id,
+                cells: [
+                  s.name,
+                  `${s.startTime} – ${s.endTime}`,
+                  s.graceMinutes > 0 ? `${s.graceMinutes} min` : "—",
+                ],
+                delete: <DeleteButton entity="shift" id={s.id} label={s.name} />,
+              }))}
+            />
+          </div>
+
+          <div>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-faint">Locations</h3>
+            <LocationsSettings enabled={multiLocation} locations={locations} />
+          </div>
+
+          <div>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-faint">Probation periods</h3>
+            <Section
+              title="Probation periods"
+              headers={["Duration", ""]}
+              empty="No probation periods yet."
+              form={
+                <AddForm action={createProbationPeriod}>
+                  <Field label="Months" htmlFor="prob-months" className="w-40">
+                    <Input id="prob-months" name="months" type="number" min={1} max={36} placeholder="e.g. 6" required />
+                  </Field>
+                </AddForm>
+              }
+              rows={probationPeriods.map((p) => ({
+                id: p.id,
+                cells: [`${p.months} month${p.months > 1 ? "s" : ""}`],
+                delete: <DeleteButton entity="probationPeriod" id={p.id} label={`${p.months} months`} />,
+              }))}
+            />
+          </div>
+
+          <div>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-faint">Reminders</h3>
+            <EventReminderSettings enabled={eventReminder.enabled} time={eventReminder.time} />
+          </div>
+          </div>
+        </div>
+      )}
 
       {tab === "Departments" && (
         <Section
@@ -152,82 +232,6 @@ export function OrgTabs({
         />
       )}
 
-      {tab === "Shifts" && (
-        <Section
-          title="Work shifts"
-          headers={["Name", "Timing", "Grace", ""]}
-          empty="No shifts yet."
-          form={
-            <AddForm action={createShift}>
-              <Field label="Shift name" htmlFor="shift-name" className="min-w-48">
-                <Input id="shift-name" name="name" placeholder="e.g. General" required />
-              </Field>
-              <Field label="Start" htmlFor="shift-start" className="w-40">
-                <Input id="shift-start" name="startTime" type="time" defaultValue="09:00" required />
-              </Field>
-              <Field label="End" htmlFor="shift-end" className="w-40">
-                <Input id="shift-end" name="endTime" type="time" defaultValue="18:00" required />
-              </Field>
-              <Field label="Grace (min)" htmlFor="shift-grace" className="w-32" hint="On-time window">
-                <Input id="shift-grace" name="graceMinutes" type="number" min={0} max={180} defaultValue={0} />
-              </Field>
-            </AddForm>
-          }
-          rows={shifts.map((s) => ({
-            id: s.id,
-            cells: [
-              s.name,
-              `${s.startTime} – ${s.endTime}`,
-              s.graceMinutes > 0 ? `${s.graceMinutes} min` : "—",
-            ],
-            delete: <DeleteButton entity="shift" id={s.id} label={s.name} />,
-          }))}
-        />
-      )}
-
-      {tab === "Locations" && (
-        <div className="space-y-5">
-          <MultiLocationToggle enabled={multiLocation} />
-          <Section
-            title="Locations"
-            headers={["Name", ""]}
-            empty="No locations yet."
-            form={
-              <AddForm action={createLocation}>
-                <Field label="Location name" htmlFor="loc-name" className="min-w-64">
-                  <Input id="loc-name" name="name" placeholder="e.g. Bengaluru HQ" required />
-                </Field>
-              </AddForm>
-            }
-            rows={locations.map((l) => ({
-              id: l.id,
-              cells: [l.name],
-              delete: <DeleteButton entity="location" id={l.id} label={l.name} />,
-            }))}
-          />
-        </div>
-      )}
-
-      {tab === "Probation" && (
-        <Section
-          title="Probation periods"
-          headers={["Duration", ""]}
-          empty="No probation periods yet."
-          form={
-            <AddForm action={createProbationPeriod}>
-              <Field label="Months" htmlFor="prob-months" className="w-40">
-                <Input id="prob-months" name="months" type="number" min={1} max={36} placeholder="e.g. 6" required />
-              </Field>
-            </AddForm>
-          }
-          rows={probationPeriods.map((p) => ({
-            id: p.id,
-            cells: [`${p.months} month${p.months > 1 ? "s" : ""}`],
-            delete: <DeleteButton entity="probationPeriod" id={p.id} label={`${p.months} months`} />,
-          }))}
-        />
-      )}
-
       {tab === "Access" && accessMatrix && <PermissionsMatrix initial={accessMatrix} />}
 
       {tab === "Task access" && taskScopes && <TaskScopeMatrix initial={taskScopes} />}
@@ -235,13 +239,50 @@ export function OrgTabs({
   );
 }
 
-function MultiLocationToggle({ enabled }: { enabled: boolean }) {
+function Toggle({ on, onClick, disabled }: { on: boolean; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50",
+        on ? "bg-brand-600" : "bg-line-strong",
+      )}
+    >
+      <span
+        className={cn(
+          "inline-block size-5 transform rounded-full bg-white shadow transition-transform",
+          on ? "translate-x-[22px]" : "translate-x-0.5",
+        )}
+      />
+    </button>
+  );
+}
+
+function LocationsSettings({ enabled, locations }: { enabled: boolean; locations: Loc[] }) {
   const [on, setOn] = useState(enabled);
   const [pending, start] = useTransition();
+  // With a single location already set and multi-location off, there's nothing to add.
+  const showAdd = on || locations.length === 0;
+
+  function toggle() {
+    const next = !on;
+    setOn(next);
+    start(async () => {
+      const res = await setMultiLocation(next);
+      if (res.error) {
+        setOn(!next);
+        alert(res.error);
+      }
+    });
+  }
 
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between gap-4">
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between gap-4 border-b border-line p-5">
         <div>
           <h3 className="text-sm font-semibold text-content">Multiple work locations</h3>
           <p className="mt-0.5 max-w-md text-sm text-muted">
@@ -249,35 +290,95 @@ function MultiLocationToggle({ enabled }: { enabled: boolean }) {
             auto-assigned and the field is hidden.
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={on}
+        <Toggle on={on} disabled={pending} onClick={toggle} />
+      </div>
+
+      {showAdd && (
+        <div className="border-b border-line p-5">
+          <h3 className="mb-3 text-sm font-semibold text-content">Add location</h3>
+          <AddForm action={createLocation}>
+            <Field label="Location name" htmlFor="loc-name" className="min-w-64">
+              <Input id="loc-name" name="name" placeholder="e.g. Bengaluru HQ" required />
+            </Field>
+          </AddForm>
+        </div>
+      )}
+
+      {locations.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-muted">No locations yet.</p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-xs font-semibold uppercase tracking-wider text-faint">
+              <th className="px-5 py-3">Name</th>
+              <th className="px-5 py-3" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {locations.map((l) => (
+              <tr key={l.id} className="hover:bg-canvas">
+                <td className="px-5 py-3 font-medium text-content">{l.name}</td>
+                <td className="px-5 py-3 text-right">
+                  <DeleteButton entity="location" id={l.id} label={l.name} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </Card>
+  );
+}
+
+function EventReminderSettings({ enabled, time }: { enabled: boolean; time: string }) {
+  const router = useRouter();
+  const [on, setOn] = useState(enabled);
+  const [t, setT] = useState(time);
+  const [pending, start] = useTransition();
+
+  function persist(nextOn: boolean, nextTime: string) {
+    start(async () => {
+      const res = await setEventReminder({ enabled: nextOn, time: nextTime });
+      if (res.error) alert(res.error);
+      else router.refresh();
+    });
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between gap-4 p-5">
+        <div>
+          <h3 className="text-sm font-semibold text-content">Day-before reminders</h3>
+          <p className="mt-0.5 max-w-md text-sm text-muted">
+            Notify everyone the day before a holiday or announcement, at the time below (company timezone).
+          </p>
+        </div>
+        <Toggle
+          on={on}
           disabled={pending}
           onClick={() => {
             const next = !on;
             setOn(next);
-            start(async () => {
-              const res = await setMultiLocation(next);
-              if (res.error) {
-                setOn(!next);
-                alert(res.error);
-              }
-            });
+            persist(next, t);
           }}
-          className={cn(
-            "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-            on ? "bg-brand-600" : "bg-line-strong",
-          )}
-        >
-          <span
-            className={cn(
-              "absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform",
-              on ? "translate-x-5" : "translate-x-0.5",
-            )}
-          />
-        </button>
+        />
       </div>
+      {on && (
+        <div className="flex items-center gap-3 border-t border-line p-5">
+          <label htmlFor="reminder-time" className="text-sm font-medium text-content">
+            Send at
+          </label>
+          <input
+            id="reminder-time"
+            type="time"
+            value={t}
+            onChange={(e) => setT(e.target.value)}
+            onBlur={() => persist(on, t)}
+            className="h-10 rounded-xl bg-surface px-3 text-sm text-content ring-1 ring-inset ring-line-strong focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          {pending && <span className="text-xs text-muted">Saving…</span>}
+        </div>
+      )}
     </Card>
   );
 }
@@ -296,42 +397,40 @@ function Section({
   empty: string;
 }) {
   return (
-    <div className="space-y-5">
-      <Card className="p-5">
+    <Card className="overflow-hidden">
+      <div className="border-b border-line p-5">
         <h3 className="mb-3 text-sm font-semibold text-content">Add {title.toLowerCase()}</h3>
         {form}
-      </Card>
+      </div>
 
-      <Card>
-        {rows.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-muted">{empty}</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line text-left text-xs font-semibold uppercase tracking-wider text-faint">
-                {headers.map((h, i) => (
-                  <th key={i} className="px-5 py-3">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-canvas">
-                  {r.cells.map((c, i) => (
-                    <td
-                      key={i}
-                      className={cn("px-5 py-3", i === 0 ? "font-medium text-content" : "text-muted")}
-                    >
-                      {c}
-                    </td>
-                  ))}
-                  <td className="px-5 py-3 text-right">{r.delete}</td>
-                </tr>
+      {rows.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-muted">{empty}</p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-xs font-semibold uppercase tracking-wider text-faint">
+              {headers.map((h, i) => (
+                <th key={i} className="px-5 py-3">{h}</th>
               ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
-    </div>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {rows.map((r) => (
+              <tr key={r.id} className="hover:bg-canvas">
+                {r.cells.map((c, i) => (
+                  <td
+                    key={i}
+                    className={cn("px-5 py-3", i === 0 ? "font-medium text-content" : "text-muted")}
+                  >
+                    {c}
+                  </td>
+                ))}
+                <td className="px-5 py-3 text-right">{r.delete}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </Card>
   );
 }

@@ -440,10 +440,24 @@ export async function removeTaskAssignee(taskId: string, employeeId: string): Pr
 
 export async function deleteTask(taskId: string): Promise<ProjectState> {
   const session = await requireCapability("task:manage");
-  // Children first (FK), then the task.
-  await prisma.taskAssignee.deleteMany({ where: { taskId, task: { project: { companyId: session.companyId } } } });
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, project: { companyId: session.companyId } },
+    select: { id: true },
+  });
+  if (!task) return { error: "Task not found" };
+
+  // Remove every child row first (FKs), then the task itself.
+  await prisma.task.updateMany({ where: { parentTaskId: taskId }, data: { parentTaskId: null } });
+  await prisma.taskDependency.deleteMany({ where: { OR: [{ taskId }, { dependsOnId: taskId }] } });
+  await prisma.taskTimer.deleteMany({ where: { taskId } });
+  await prisma.timeEntry.deleteMany({ where: { taskId } });
+  await prisma.checklistItem.deleteMany({ where: { taskId } });
+  await prisma.attachment.deleteMany({ where: { taskId } });
+  await prisma.taskAssignee.deleteMany({ where: { taskId } });
   await prisma.comment.deleteMany({ where: { taskId } });
-  await prisma.task.deleteMany({ where: { id: taskId, project: { companyId: session.companyId } } });
+  await prisma.task.delete({ where: { id: taskId } });
+
+  revalidatePath("/tasks");
   return { ok: true };
 }
 

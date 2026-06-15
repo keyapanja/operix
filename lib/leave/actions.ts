@@ -2,15 +2,40 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { LeavePaidType, AllowancePeriod, RequestKind } from "@prisma/client";
+import { LeavePaidType, AllowancePeriod, RequestKind, type Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/auth/guard";
 import { getSession } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
 import { remainingForType } from "@/lib/leave/balance";
 import { dateAtUTC } from "@/lib/dates";
+import { formatDate } from "@/lib/format";
 
 export type LeaveState = { error?: string; ok?: boolean };
 const LEAVE = "/leave";
+
+// ---- Notifications --------------------------------------------------------
+async function notifyUsers(userIds: string[], title: string, body: string): Promise<void> {
+  const targets = [...new Set(userIds)].filter(Boolean);
+  if (!targets.length) return;
+  await prisma.notification.createMany({
+    data: targets.map((userId) => ({ userId, type: "LEAVE", title, body })),
+  });
+}
+
+/** Active users whose role can approve leave (admins / HR / team leads / configured). */
+async function leaveApproverUserIds(companyId: string, exclude?: string): Promise<string[]> {
+  const roles: Role[] = [];
+  for (const role of ["SUPER_ADMIN", "HR_MANAGER", "PROJECT_MANAGER", "TEAM_LEAD", "EMPLOYEE"] as Role[]) {
+    if (await hasPermission(companyId, role, "leave:approve")) roles.push(role);
+  }
+  if (!roles.length) return [];
+  const users = await prisma.user.findMany({
+    where: { companyId, isActive: true, role: { in: roles } },
+    select: { id: true },
+  });
+  return users.map((u) => u.id).filter((id) => id !== exclude);
+}
 
 // ---- Leave types ----------------------------------------------------------
 const LeaveTypeSchema = z.object({
@@ -111,6 +136,24 @@ export async function applyLeave(
       status: "PENDING",
     },
   });
+
+  // Notify everyone who can approve leave.
+  try {
+    const emp = await prisma.employee.findUnique({
+      where: { id: session.employeeId },
+      select: { fullName: true },
+    });
+    const kindLabel = d.kind === "WFH" ? "work from home" : "leave";
+    const approvers = await leaveApproverUserIds(session.companyId, session.userId);
+    await notifyUsers(
+      approvers,
+      "New leave request",
+      `${emp?.fullName ?? "An employee"} requested ${kindLabel} for ${formatDate(start)} – ${formatDate(end)}.`,
+    );
+  } catch (e) {
+    console.error("[leave] notify approvers failed:", e);
+  }
+
   revalidatePath("/leave");
   return { ok: true };
 }
@@ -184,37 +227,85 @@ export async function approveLeave(id: string): Promise<LeaveState> {
   const session = await requireCapability("leave:approve");
   const req = await prisma.leaveRequest.findFirst({
     where: { id, companyId: session.companyId },
-    select: { status: true },
+    select: {
+      status: true,
+      startDate: true,
+      endDate: true,
+      employee: { select: { user: { select: { id: true } } } },
+    },
   });
   if (!req) return { error: "Request not found" };
 
+  let newStatus: "MANAGER_APPROVED" | "HR_APPROVED";
   if (req.status === "PENDING") {
+    newStatus = "MANAGER_APPROVED";
     await prisma.leaveRequest.update({
       where: { id },
-      data: { status: "MANAGER_APPROVED", managerApprovedById: session.userId },
+      data: { status: newStatus, managerApprovedById: session.userId },
     });
   } else if (req.status === "MANAGER_APPROVED") {
+    newStatus = "HR_APPROVED";
     await prisma.leaveRequest.update({
       where: { id },
-      data: { status: "HR_APPROVED", hrApprovedById: session.userId, decidedAt: new Date() },
+      data: { status: newStatus, hrApprovedById: session.userId, decidedAt: new Date() },
     });
   } else {
     return { error: "This request has already been decided" };
   }
+
+  // Notify the employee.
+  try {
+    const empUserId = req.employee.user?.id;
+    if (empUserId) {
+      const range = `${formatDate(req.startDate)} – ${formatDate(req.endDate)}`;
+      const final = newStatus === "HR_APPROVED";
+      await notifyUsers(
+        [empUserId],
+        final ? "Leave approved" : "Leave approved by manager",
+        final
+          ? `Your leave request (${range}) was approved.`
+          : `Your leave request (${range}) was approved by your manager — pending final approval.`,
+      );
+    }
+  } catch (e) {
+    console.error("[leave] notify employee (approve) failed:", e);
+  }
+
   revalidatePath(LEAVE);
   return { ok: true };
 }
 
 export async function rejectLeave(id: string): Promise<LeaveState> {
   const session = await requireCapability("leave:approve");
-  await prisma.leaveRequest.updateMany({
-    where: {
-      id,
-      companyId: session.companyId,
-      status: { in: ["PENDING", "MANAGER_APPROVED"] },
+  const req = await prisma.leaveRequest.findFirst({
+    where: { id, companyId: session.companyId, status: { in: ["PENDING", "MANAGER_APPROVED"] } },
+    select: {
+      startDate: true,
+      endDate: true,
+      employee: { select: { user: { select: { id: true } } } },
     },
+  });
+  if (!req) return { error: "This request has already been decided" };
+
+  await prisma.leaveRequest.update({
+    where: { id },
     data: { status: "REJECTED", decidedAt: new Date() },
   });
+
+  // Notify the employee.
+  try {
+    const empUserId = req.employee.user?.id;
+    if (empUserId) {
+      await notifyUsers(
+        [empUserId],
+        "Leave rejected",
+        `Your leave request (${formatDate(req.startDate)} – ${formatDate(req.endDate)}) was rejected.`,
+      );
+    }
+  } catch (e) {
+    console.error("[leave] notify employee (reject) failed:", e);
+  }
+
   revalidatePath(LEAVE);
   return { ok: true };
 }

@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/auth/guard";
 import { dateAtUTC } from "@/lib/dates";
+import { formatDate } from "@/lib/format";
+import { notifyAllInternal } from "@/lib/calendar/reminders";
 
 export type CalendarState = { error?: string; ok?: boolean };
 const CAL = "/calendar";
@@ -66,7 +68,7 @@ export async function createAnnouncement(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   const d = parsed.data;
 
-  await prisma.announcement.create({
+  const ann = await prisma.announcement.create({
     data: {
       companyId: session.companyId,
       title: d.title,
@@ -74,6 +76,20 @@ export async function createAnnouncement(
       date: dateAtUTC(d.date),
     },
   });
+
+  // Surface the announcement in everyone's notifications.
+  try {
+    await notifyAllInternal(
+      session.companyId,
+      "ANNOUNCEMENT",
+      d.title,
+      d.body || `Announcement for ${formatDate(dateAtUTC(d.date))}.`,
+      { announcementId: ann.id },
+    );
+  } catch (e) {
+    console.error("[announcement] notify failed:", e);
+  }
+
   revalidatePath(CAL);
   return { ok: true };
 }
@@ -82,5 +98,23 @@ export async function deleteAnnouncement(id: string): Promise<CalendarState> {
   const session = await requireCapability("org:manage");
   await prisma.announcement.deleteMany({ where: { id, companyId: session.companyId } });
   revalidatePath(CAL);
+  return { ok: true };
+}
+
+// ---- Day-before reminder setting -----------------------------------------
+const ReminderSchema = z.object({
+  enabled: z.boolean(),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+});
+
+export async function setEventReminder(input: { enabled: boolean; time: string }): Promise<CalendarState> {
+  const session = await requireCapability("org:manage");
+  const parsed = ReminderSchema.safeParse(input);
+  if (!parsed.success) return { error: "Invalid input" };
+  await prisma.company.update({
+    where: { id: session.companyId },
+    data: { eventReminderEnabled: parsed.data.enabled, eventReminderTime: parsed.data.time },
+  });
+  revalidatePath("/organization");
   return { ok: true };
 }

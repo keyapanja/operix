@@ -10,7 +10,13 @@ import { cn } from "@/lib/cn";
 const COLLAPSE_KEY = "operix:sidebar:collapsed";
 const EXPANDED_KEY = "operix:sidebar:expanded";
 
-export function Sidebar({ allowed }: { allowed: string[] }) {
+export function Sidebar({
+  allowed,
+  company,
+}: {
+  allowed: string[];
+  company: { name: string; tagline: string | null; logoUrl: string | null };
+}) {
   const pathname = usePathname();
   const items = NAV.filter((i) => !i.action || allowed.includes(i.action));
 
@@ -55,6 +61,19 @@ export function Sidebar({ allowed }: { allowed: string[] }) {
       return next;
     });
   }
+
+  const logoMark = company.logoUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={company.logoUrl}
+      alt={company.name}
+      className="size-9 shrink-0 rounded-xl object-cover shadow-brand"
+    />
+  ) : (
+    <span className="gradient-brand flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-brand">
+      {company.name.slice(0, 1).toUpperCase()}
+    </span>
+  );
 
   return (
     <aside
@@ -201,14 +220,21 @@ export function Sidebar({ allowed }: { allowed: string[] }) {
         )}
       </nav>
 
-      {!collapsed && (
-        <div className="border-t border-line p-3">
-          <div className="rounded-xl bg-canvas p-3">
-            <p className="text-xs font-medium text-content">Phase 1 · MVP</p>
-            <p className="mt-0.5 text-[11px] text-muted">Foundation modules live</p>
+      <div className="border-t border-line p-3">
+        {collapsed ? (
+          <div className="flex justify-center" title={company.name}>
+            {logoMark}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="flex items-center gap-2.5 rounded-xl bg-canvas p-2.5">
+            {logoMark}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-content">{company.name}</p>
+              {company.tagline && <p className="truncate text-[11px] text-muted">{company.tagline}</p>}
+            </div>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

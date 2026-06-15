@@ -131,12 +131,20 @@ model Company {
   id                 String   @id @default(cuid())
   name               String
   logoKey            String?
+  logoUrl            String? // logo image URL — real uploads land in Phase 2 file storage
   address            String?
   timezone           String   @default("Asia/Kolkata")
   currency           String   @default("INR")
   businessType       String?
+  tagline            String?  // short descriptor shown in the sidebar / branding
+  website            String?
+  email              String?
+  phone              String?
   employeeCodePrefix String   @default("EMP")
   multiLocation      Boolean  @default(false)
+  // Remind everyone the day before a holiday / announcement.
+  eventReminderEnabled Boolean @default(false)
+  eventReminderTime    String  @default("09:00") // HH:MM in the company timezone
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -165,6 +173,7 @@ model Holiday {
   companyId String
   date      DateTime @db.Date
   name      String
+  reminderSentAt DateTime? // day-before reminder fan-out guard
   createdAt DateTime @default(now())
 
   company Company @relation(fields: [companyId], references: [id])
@@ -180,6 +189,7 @@ model Announcement {
   title     String
   body      String?
   date      DateTime @db.Date
+  reminderSentAt DateTime? // day-before reminder fan-out guard
   createdAt DateTime @default(now())
 
   company Company @relation(fields: [companyId], references: [id])
@@ -319,6 +329,10 @@ model User {
   passwordHash String? // null until the invited user sets their password
   role         Role
   isActive     Boolean  @default(true)
+  // Self-managed profile:
+  nickname     String?
+  avatarUrl    String? // image URL — real uploads land in Phase 2 file storage
+  bio          String?
   // Invite / set-password flow:
   setupToken          String?   @unique
   setupTokenExpiresAt DateTime?
@@ -865,14 +879,18 @@ model ClientContact {
 }
 
 model Deliverable {
-  id          String            @id @default(cuid())
-  projectId   String
-  name        String
-  fileKey     String?
-  status      DeliverableStatus @default(SUBMITTED)
-  feedback    String?
-  submittedAt DateTime          @default(now())
-  decidedAt   DateTime?
+  id            String            @id @default(cuid())
+  projectId     String
+  name          String
+  description   String?           // short context shown to the client
+  link          String?           // deliverable URL (link-based review); fileKey reserved for Phase 2 uploads
+  fileKey       String?
+  status        DeliverableStatus @default(SUBMITTED)
+  feedback      String?           // client's revision feedback
+  submittedById String?           // internal user who published it
+  decidedById   String?           // client user who approved / requested revision
+  submittedAt   DateTime          @default(now())
+  decidedAt     DateTime?
 
   project Project @relation(fields: [projectId], references: [id])
 

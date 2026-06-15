@@ -10,6 +10,7 @@ import { PRIORITY_TONE } from "@/lib/status";
 import { KanbanBoard } from "@/components/projects/kanban-board";
 import { ProjectStatusControl } from "@/components/projects/project-status";
 import { ProjectServices } from "@/components/projects/project-services";
+import { DeliverablesPanel } from "@/components/projects/deliverables-panel";
 import { BackLink } from "@/components/ui/back-link";
 import type { KanbanTask } from "@/lib/projects/actions";
 
@@ -48,6 +49,10 @@ export default async function ProjectDetailPage({
             service: { select: { name: true } },
             assignees: { select: { employee: { select: { fullName: true } } } },
           },
+        },
+        deliverables: {
+          orderBy: { submittedAt: "desc" },
+          select: { id: true, name: true, description: true, link: true, status: true, feedback: true },
         },
       },
     }),
@@ -129,6 +134,8 @@ export default async function ProjectDetailPage({
         available={available}
         employees={employees.map((e) => ({ id: e.id, name: e.fullName }))}
       />
+
+      {project.client && <DeliverablesPanel projectId={project.id} items={project.deliverables} />}
 
       <KanbanBoard
         projectId={project.id}

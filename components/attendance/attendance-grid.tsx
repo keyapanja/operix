@@ -5,7 +5,11 @@ import type { AttendanceType } from "@prisma/client";
 import { markAttendance, resetAttendance } from "@/lib/attendance/actions";
 import { effectiveStatus } from "@/lib/attendance/resolve";
 import { Icon } from "@/components/ui/icons";
+import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
+import { Modal } from "@/components/ui/modal";
+import { Field } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 export type AttendanceRow = {
@@ -24,12 +28,24 @@ export type AttendanceRow = {
 const STATUS: { value: AttendanceType; label: string; active: string }[] = [
   { value: "PRESENT", label: "Present", active: "bg-emerald-500 text-white" },
   { value: "ABSENT", label: "Absent", active: "bg-red-500 text-white" },
-  { value: "HALF_DAY", label: "Half", active: "bg-amber-500 text-white" },
-  { value: "LEAVE", label: "Leave", active: "bg-brand-500 text-white" },
+  { value: "HALF_DAY", label: "Half day", active: "bg-amber-500 text-white" },
+  { value: "LEAVE", label: "On leave", active: "bg-brand-500 text-white" },
   { value: "HOLIDAY", label: "Holiday", active: "bg-slate-400 text-white" },
 ];
 
+type Tone = "gray" | "green" | "amber" | "blue" | "red";
+const BADGE: Record<AttendanceType, { tone: Tone; label: string }> = {
+  PRESENT: { tone: "green", label: "Present" },
+  ABSENT: { tone: "red", label: "Absent" },
+  HALF_DAY: { tone: "amber", label: "Half day" },
+  LEAVE: { tone: "blue", label: "On leave" },
+  HOLIDAY: { tone: "gray", label: "Holiday" },
+};
+
 const PAGE_SIZES = [10, 25, 50];
+
+// A record the employee created themselves (self punch-in), not an admin entry.
+const isSelfLogged = (r: AttendanceRow) => !!r.clockIn && !r.markedManually;
 
 export function AttendanceGrid({
   date,
@@ -45,7 +61,7 @@ export function AttendanceGrid({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
-  const [, startTransition] = useTransition();
+  const [editing, setEditing] = useState<AttendanceRow | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -71,19 +87,16 @@ export function AttendanceGrid({
   function update(employeeId: string, patch: Partial<AttendanceRow>) {
     setRows((rs) => rs.map((r) => (r.employeeId === employeeId ? { ...r, ...patch } : r)));
   }
-  function save(employeeId: string, input: { type?: AttendanceType; clockIn?: string; clockOut?: string }) {
-    startTransition(async () => {
-      const res = await markAttendance({ employeeId, date, ...input });
-      if (res.error) alert(res.error);
-    });
-  }
-  function reset(employeeId: string, name: string) {
-    if (!confirm(`Clear ${name}'s attendance for this day? This removes their punch in/out and status.`)) return;
-    startTransition(async () => {
-      const res = await resetAttendance({ employeeId, date });
-      if (res.error) alert(res.error);
-      else update(employeeId, { recordType: null, markedManually: false, clockIn: "", clockOut: "" });
-    });
+
+  function openEdit(r: AttendanceRow) {
+    // If they already clocked in themselves, confirm before overriding their log.
+    if (isSelfLogged(r)) {
+      const ok = confirm(
+        `${r.name} has already logged in themselves${r.clockIn ? ` at ${r.clockIn}` : ""}. Do you really want to edit their time logs?`,
+      );
+      if (!ok) return;
+    }
+    setEditing(r);
   }
 
   if (rows.length === 0) {
@@ -140,7 +153,7 @@ export function AttendanceGrid({
             <th className="px-5 py-3">Status</th>
             <th className="px-5 py-3">In</th>
             <th className="px-5 py-3">Out</th>
-            <th className="px-5 py-3 text-right">Reset</th>
+            <th className="px-5 py-3 text-right">Log</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -151,6 +164,7 @@ export function AttendanceGrid({
               onLeave: r.onLeave,
               holiday,
             });
+            const hasRecord = !!(r.recordType || r.clockIn || r.clockOut);
             return (
               <tr key={r.employeeId} className="hover:bg-canvas">
                 <td className="px-5 py-3">
@@ -164,60 +178,37 @@ export function AttendanceGrid({
                     </div>
                   </div>
                 </td>
+                {/* Status — display only */}
                 <td className="px-5 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex flex-wrap gap-1 rounded-lg bg-canvas p-1">
-                      {STATUS.map((s) => (
-                        <button
-                          key={s.value}
-                          onClick={() => {
-                            update(r.employeeId, { recordType: s.value, markedManually: true });
-                            save(r.employeeId, { type: s.value });
-                          }}
-                          className={cn(
-                            "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                            eff === s.value ? s.active : "text-muted hover:text-content",
-                          )}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                    {r.isLate && eff === null && (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300">
-                        Not logged in
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-5 py-3">
-                  <input
-                    type="time"
-                    value={r.clockIn}
-                    onChange={(e) => update(r.employeeId, { clockIn: e.target.value })}
-                    onBlur={(e) => save(r.employeeId, { clockIn: e.target.value })}
-                    className="h-9 w-32 rounded-lg bg-surface px-2 text-sm text-content ring-1 ring-inset ring-line-strong focus:ring-2 focus:ring-brand-500"
-                  />
-                </td>
-                <td className="px-5 py-3">
-                  <input
-                    type="time"
-                    value={r.clockOut}
-                    onChange={(e) => update(r.employeeId, { clockOut: e.target.value })}
-                    onBlur={(e) => save(r.employeeId, { clockOut: e.target.value })}
-                    className="h-9 w-32 rounded-lg bg-surface px-2 text-sm text-content ring-1 ring-inset ring-line-strong focus:ring-2 focus:ring-brand-500"
-                  />
-                </td>
-                <td className="px-5 py-3 text-right">
-                  {(r.recordType || r.clockIn || r.clockOut) && (
-                    <button
-                      onClick={() => reset(r.employeeId, r.name)}
-                      title="Clear this day's record"
-                      className="inline-flex size-8 items-center justify-center rounded-lg text-faint transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/15"
-                    >
-                      <Icon name="trash" className="size-4" />
-                    </button>
+                  {eff ? (
+                    <Badge tone={BADGE[eff].tone}>{BADGE[eff].label}</Badge>
+                  ) : r.isLate ? (
+                    <Badge tone="red">Not logged in</Badge>
+                  ) : (
+                    <span className="text-sm text-faint">Unmarked</span>
                   )}
+                </td>
+                <td className="px-5 py-3 text-muted">
+                  <span className="tabular-nums">{r.clockIn || "—"}</span>
+                  {isSelfLogged(r) && (
+                    <span
+                      title="Logged in by the employee"
+                      className="ml-1.5 rounded bg-emerald-500/10 px-1 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+                    >
+                      self
+                    </span>
+                  )}
+                </td>
+                <td className="px-5 py-3 text-muted tabular-nums">{r.clockOut || "—"}</td>
+                <td className="px-5 py-3 text-right">
+                  <button
+                    onClick={() => openEdit(r)}
+                    title={hasRecord ? "Edit attendance" : "Log attendance"}
+                    aria-label={hasRecord ? "Edit attendance" : "Log attendance"}
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-faint transition-colors hover:bg-canvas hover:text-content"
+                  >
+                    <Icon name={hasRecord ? "pencil" : "plus"} className="size-4" />
+                  </button>
                 </td>
               </tr>
             );
@@ -257,6 +248,135 @@ export function AttendanceGrid({
           </button>
         </div>
       </div>
+
+      {editing && (
+        <AttendanceEditDialog
+          row={editing}
+          date={date}
+          holiday={holiday}
+          onClose={() => setEditing(null)}
+          onSaved={(patch) => {
+            update(editing.employeeId, patch);
+            setEditing(null);
+          }}
+          onCleared={() => {
+            update(editing.employeeId, { recordType: null, markedManually: false, clockIn: "", clockOut: "" });
+            setEditing(null);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function AttendanceEditDialog({
+  row,
+  date,
+  holiday,
+  onClose,
+  onSaved,
+  onCleared,
+}: {
+  row: AttendanceRow;
+  date: string;
+  holiday: boolean;
+  onClose: () => void;
+  onSaved: (patch: Partial<AttendanceRow>) => void;
+  onCleared: () => void;
+}) {
+  const [type, setType] = useState<AttendanceType>(row.recordType ?? (holiday ? "HOLIDAY" : "PRESENT"));
+  const [clockIn, setClockIn] = useState(row.clockIn);
+  const [clockOut, setClockOut] = useState(row.clockOut);
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const hasRecord = !!(row.recordType || row.clockIn || row.clockOut);
+
+  function save() {
+    setErr(null);
+    start(async () => {
+      const res = await markAttendance({ employeeId: row.employeeId, date, type, clockIn, clockOut });
+      if (res.error) setErr(res.error);
+      else onSaved({ recordType: type, markedManually: true, clockIn, clockOut });
+    });
+  }
+  function clear() {
+    if (!confirm(`Clear ${row.name}'s attendance for this day? This removes their punch in/out and status.`)) return;
+    setErr(null);
+    start(async () => {
+      const res = await resetAttendance({ employeeId: row.employeeId, date });
+      if (res.error) setErr(res.error);
+      else onCleared();
+    });
+  }
+
+  return (
+    <Modal onClose={onClose} title={`Log attendance · ${row.name}`}>
+      <div className="space-y-4">
+        {isSelfLogged(row) && (
+          <div className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/25">
+            {row.name} logged in themselves{row.clockIn ? ` at ${row.clockIn}` : ""}. Editing overrides their record.
+          </div>
+        )}
+        {err && (
+          <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-inset ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/25">
+            {err}
+          </div>
+        )}
+
+        <Field label="Status">
+          <div className="inline-flex flex-wrap gap-1 rounded-xl bg-canvas p-1">
+            {STATUS.map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => setType(s.value)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  type === s.value ? s.active : "text-muted hover:text-content",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Clock in" htmlFor="att-in">
+            <input
+              id="att-in"
+              type="time"
+              value={clockIn}
+              onChange={(e) => setClockIn(e.target.value)}
+              className="h-10 w-full rounded-xl bg-surface px-3 text-sm text-content ring-1 ring-inset ring-line-strong focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </Field>
+          <Field label="Clock out" htmlFor="att-out">
+            <input
+              id="att-out"
+              type="time"
+              value={clockOut}
+              onChange={(e) => setClockOut(e.target.value)}
+              className="h-10 w-full rounded-xl bg-surface px-3 text-sm text-content ring-1 ring-inset ring-line-strong focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </Field>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 pt-1">
+          {hasRecord ? (
+            <Button variant="danger" size="sm" onClick={clear} disabled={pending}>
+              <Icon name="trash" className="size-4" />
+              Clear day
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose} disabled={pending}>Cancel</Button>
+            <Button onClick={save} disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { createProject, type ProjectState } from "@/lib/projects/actions";
 import { Card } from "@/components/ui/card";
@@ -9,7 +9,9 @@ import { Field } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Icon } from "@/components/ui/icons";
 import { humanizeEnum } from "@/lib/format";
+import { cn } from "@/lib/cn";
 
 type Opt = { id: string; name: string };
 
@@ -21,6 +23,8 @@ export function ProjectForm({ clients, services }: { clients: Opt[]; services: O
     createProject,
     {},
   );
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
 
   return (
     <form action={formAction} className="space-y-5">
@@ -62,17 +66,36 @@ export function ProjectForm({ clients, services }: { clients: Opt[]; services: O
               No services yet — add them in Organization → Services.
             </p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {services.map((s) => (
-                <label
-                  key={s.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-xl border border-line-strong px-3 py-2 text-sm text-content hover:bg-canvas"
-                >
-                  <input type="checkbox" name="serviceIds" value={s.id} className="size-4 rounded border-line-strong text-brand-600 focus:ring-brand-500" />
-                  {s.name}
-                </label>
-              ))}
-            </div>
+            <>
+              <div className="relative mb-3 max-w-xs">
+                <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search services…"
+                  className="h-9 w-full rounded-xl bg-surface pl-9 pr-3 text-sm text-content ring-1 ring-inset ring-line-strong placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {services.map((s) => (
+                  // Hidden (not unmounted) when filtered out, so checked services still submit.
+                  <label
+                    key={s.id}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 rounded-xl border border-line-strong px-3 py-2 text-sm text-content hover:bg-canvas",
+                      q && !s.name.toLowerCase().includes(q) && "hidden",
+                    )}
+                  >
+                    <input type="checkbox" name="serviceIds" value={s.id} className="size-4 rounded border-line-strong text-brand-600 focus:ring-brand-500" />
+                    {s.name}
+                  </label>
+                ))}
+              </div>
+              {q && !services.some((s) => s.name.toLowerCase().includes(q)) && (
+                <p className="mt-2 text-sm text-muted">No services match “{query}”.</p>
+              )}
+            </>
           )}
         </div>
       </Card>

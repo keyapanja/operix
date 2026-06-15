@@ -6,6 +6,7 @@ export type NoteCategory =
   | "Mentions"
   | "Attendance"
   | "Leave"
+  | "Announcements"
   | "Payroll"
   | "Clients"
   | "General";
@@ -15,6 +16,7 @@ export const CATEGORY_ORDER: NoteCategory[] = [
   "Mentions",
   "Attendance",
   "Leave",
+  "Announcements",
   "Payroll",
   "Clients",
   "General",
@@ -27,6 +29,7 @@ export function categorize(type: string): NoteCategory {
   if (t.startsWith("MENTION")) return "Mentions";
   if (t.includes("LATE") || t.startsWith("ATTEND") || t.startsWith("PUNCH")) return "Attendance";
   if (t.startsWith("LEAVE") || t.startsWith("WFH")) return "Leave";
+  if (t.startsWith("ANNOUNCE") || t.startsWith("HOLIDAY")) return "Announcements";
   if (t.startsWith("PAYROLL") || t.startsWith("PAYSLIP") || t.startsWith("SALARY")) return "Payroll";
   if (t.startsWith("CLIENT") || t.includes("DELIVERABLE") || t.includes("FEEDBACK")) return "Clients";
   return "General";
@@ -45,6 +48,7 @@ export const CATEGORY_STYLES: Record<NoteCategory, CategoryStyle> = {
   Mentions: { icon: "userGroup", dot: "bg-violet-500", text: "text-violet-700 dark:text-violet-300", soft: "bg-violet-500/15", ring: "ring-violet-500/30" },
   Attendance: { icon: "clock", dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-300", soft: "bg-amber-500/15", ring: "ring-amber-500/30" },
   Leave: { icon: "calendar", dot: "bg-blue-500", text: "text-blue-700 dark:text-blue-300", soft: "bg-blue-500/15", ring: "ring-blue-500/30" },
+  Announcements: { icon: "calendarDays", dot: "bg-sky-500", text: "text-sky-700 dark:text-sky-300", soft: "bg-sky-500/15", ring: "ring-sky-500/30" },
   Payroll: { icon: "chart", dot: "bg-fuchsia-500", text: "text-fuchsia-700 dark:text-fuchsia-300", soft: "bg-fuchsia-500/15", ring: "ring-fuchsia-500/30" },
   Clients: { icon: "briefcase", dot: "bg-orange-500", text: "text-orange-700 dark:text-orange-300", soft: "bg-orange-500/15", ring: "ring-orange-500/30" },
   General: { icon: "bell", dot: "bg-slate-400", text: "text-slate-600 dark:text-slate-300", soft: "bg-slate-500/15", ring: "ring-slate-400/30" },
@@ -59,6 +63,9 @@ export function noteHref(type: string, meta: unknown): string | null {
   }
   if (cat === "Attendance") return "/attendance";
   if (cat === "Leave") return "/leave";
+  if (cat === "Announcements") return "/calendar";
+  // Client portal events (deliverable decisions, feedback) point at the project.
+  if (cat === "Clients") return typeof m.projectId === "string" ? `/projects/${m.projectId}` : null;
   return null;
 }
 

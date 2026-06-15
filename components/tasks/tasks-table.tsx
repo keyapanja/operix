@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { TaskStatus, Priority } from "@prisma/client";
+import { deleteTask } from "@/lib/projects/actions";
 import { TASK_STATUS_TONE, PRIORITY_TONE } from "@/lib/status";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icons";
@@ -105,6 +106,25 @@ export function TasksTable({
   const startIdx = (current - 1) * pageSize;
   const pageRows = filtered.slice(startIdx, startIdx + pageSize);
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [, startDelete] = useTransition();
+
+  function onEdit(e: MouseEvent, id: string) {
+    e.stopPropagation();
+    router.push(`/tasks/${id}`);
+  }
+  function onDelete(e: MouseEvent, id: string) {
+    e.stopPropagation();
+    if (!confirm("Delete this task? This can't be undone.")) return;
+    setDeletingId(id);
+    startDelete(async () => {
+      const res = await deleteTask(id);
+      setDeletingId(null);
+      if (res.error) alert(res.error);
+      else router.refresh();
+    });
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
       <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
@@ -169,6 +189,7 @@ export function TasksTable({
             <th className="px-5 py-3">Due</th>
             <th className="px-5 py-3">Assignees</th>
             {canTrack && <th className="px-5 py-3 text-right">Timer</th>}
+            <th className="px-5 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -194,11 +215,34 @@ export function TasksTable({
                   </div>
                 </td>
               )}
+              <td className="px-5 py-3">
+                <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={(e) => onEdit(e, r.id)}
+                    title="Edit task"
+                    aria-label="Edit task"
+                    className="flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-content"
+                  >
+                    <Icon name="pencil" className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => onDelete(e, r.id)}
+                    disabled={deletingId === r.id}
+                    title="Delete task"
+                    aria-label="Delete task"
+                    className="flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-500/10 hover:text-red-600 disabled:opacity-40 dark:hover:text-red-400"
+                  >
+                    <Icon name="trash" className="size-4" />
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
           {pageRows.length === 0 && (
             <tr>
-              <td colSpan={canTrack ? 8 : 7} className="px-5 py-12 text-center text-sm text-muted">No tasks match your filters.</td>
+              <td colSpan={canTrack ? 9 : 8} className="px-5 py-12 text-center text-sm text-muted">No tasks match your filters.</td>
             </tr>
           )}
         </tbody>

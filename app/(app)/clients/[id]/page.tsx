@@ -5,9 +5,10 @@ import { requirePage } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { humanizeEnum, formatDate } from "@/lib/format";
+import { humanizeEnum, formatDate, formatDateTime } from "@/lib/format";
 import { PROJECT_STATUS_TONE } from "@/lib/status";
 import { ContactForm } from "@/components/clients/contact-form";
+import { PortalAccess, type PortalStatus } from "@/components/clients/portal-access";
 import { BackLink } from "@/components/ui/back-link";
 
 export const metadata: Metadata = { title: "Client · Operix" };
@@ -29,10 +30,19 @@ export default async function ClientDetailPage({
         orderBy: { createdAt: "desc" },
         select: { id: true, name: true, status: true, dueDate: true },
       },
+      users: {
+        where: { role: "CLIENT" },
+        select: { passwordHash: true, lastLoginAt: true },
+      },
     },
   });
 
   if (!client) notFound();
+
+  // Portal login status for this client (the User row carries no PII to the client).
+  const portalUser = client.users[0] ?? null;
+  const portalStatus: PortalStatus = !portalUser ? "none" : portalUser.passwordHash ? "active" : "pending";
+  const lastLogin = portalUser?.lastLoginAt ? formatDateTime(portalUser.lastLoginAt) : null;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -48,6 +58,15 @@ export default async function ClientDetailPage({
           {client.phone && <span>{client.phone}</span>}
           {client.address && <span>{client.address}</span>}
         </div>
+      </Card>
+
+      <Card className="mb-6 p-6">
+        <PortalAccess
+          clientId={client.id}
+          clientEmail={client.email}
+          status={portalStatus}
+          lastLogin={lastLogin}
+        />
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
