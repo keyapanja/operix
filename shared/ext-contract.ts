@@ -1,4 +1,4 @@
-// Shared API contract for the Operix browser extension.
+// Shared API contract for the Oprix browser extension.
 // PURE TYPES ONLY — no server/Prisma imports — so the extension build can import
 // this file too. Enum-like fields are string-literal unions (mirroring the
 // Prisma enums) to keep this Prisma-free.
@@ -36,7 +36,7 @@ export type ExtKbLink = {
   id: string;
   title: string;
   scope: "project" | "general";
-  url: string; // deep link to the article in the Operix web app
+  url: string; // deep link to the article in the Oprix web app
 };
 
 export type ExtTask = {
@@ -55,7 +55,7 @@ export type ExtTask = {
   timer: ExtTimer;
   checklist: ExtChecklistItem[];
   kb: ExtKbLink[];
-  webUrl: string; // deep link to the task in the Operix web app
+  webUrl: string; // deep link to the task in the Oprix web app
 };
 
 /** GET /tasks/active */

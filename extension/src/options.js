@@ -1,6 +1,6 @@
-// Operix Companion — options page (full preferences).
+// Oprix Companion — options page (full preferences).
 
-const PREFS_KEY = "operix_prefs";
+const PREFS_KEY = "oprix_prefs";
 const DEFAULT_PREFS = {
   enabled: true,
   dock: "right",
@@ -133,14 +133,14 @@ async function render() {
     ),
   );
 
-  // API origin (advanced — for pointing at a deployed Operix instead of localhost)
+  // API origin (advanced — for pointing at a deployed Oprix instead of localhost)
   const input = document.createElement("input");
   input.type = "text";
   input.placeholder = "http://localhost:3000";
   input.value = prefs.apiOrigin || "";
   input.onchange = () => setPrefs({ apiOrigin: input.value.trim().replace(/\/+$/, "") });
   form.append(
-    row("Operix address", "Leave blank for local development (localhost:3000).", input),
+    row("Oprix address", "Leave blank for local development (localhost:3000).", input),
   );
 }
 

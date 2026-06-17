@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { ProjectForm } from "@/components/projects/project-form";
 
-export const metadata: Metadata = { title: "New project · Operix" };
+export const metadata: Metadata = { title: "New project · Oprix" };
 
 export default async function NewProjectPage() {
   const session = await requirePage("project:manage");

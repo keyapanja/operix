@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { NotificationsList } from "@/components/notifications/notifications-list";
 import { noteHref, formatNoteTime, type ClientNote } from "@/lib/notifications/categories";
 
-export const metadata: Metadata = { title: "Notifications · Operix" };
+export const metadata: Metadata = { title: "Notifications · Oprix" };
 
 export default async function NotificationsPage() {
   const session = await requirePage(); // any signed-in user

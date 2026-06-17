@@ -12,7 +12,7 @@ import { ExportButtons } from "@/components/reports/export-buttons";
 import { colorAt } from "@/lib/reports/colors";
 import { resolveWindow, granularityFor, buckets, bucketKey } from "@/lib/reports/range";
 
-export const metadata: Metadata = { title: "Attendance report · Operix" };
+export const metadata: Metadata = { title: "Attendance report · Oprix" };
 
 const TYPE_COLOR: Record<AttendanceType, string> = {
   PRESENT: "#10b981",
@@ -139,7 +139,7 @@ export default async function AttendanceReportPage({
 
       <Section
         title="Per-employee attendance"
-        action={<ExportButtons name={`attendance-${range}`} title={`Operix — Attendance (${label})`} table={exportTable} />}
+        action={<ExportButtons name={`attendance-${range}`} title={`Oprix — Attendance (${label})`} table={exportTable} />}
       >
         {empRows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No attendance records in this range.</p>

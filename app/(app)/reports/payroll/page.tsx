@@ -8,7 +8,7 @@ import { ExportButtons } from "@/components/reports/export-buttons";
 import { colorAt } from "@/lib/reports/colors";
 import { formatINR } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Payroll report · Operix" };
+export const metadata: Metadata = { title: "Payroll report · Oprix" };
 
 export default async function PayrollReportPage() {
   const session = await requirePage("payroll:manage");
@@ -82,7 +82,7 @@ export default async function PayrollReportPage() {
 
       <Section
         title="Per-employee salaries"
-        action={<ExportButtons name="payroll-salaries" title="Operix — Payroll (salaries)" table={exportTable} />}
+        action={<ExportButtons name="payroll-salaries" title="Oprix — Payroll (salaries)" table={exportTable} />}
       >
         {rows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No employees yet.</p>

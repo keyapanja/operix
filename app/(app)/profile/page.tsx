@@ -10,7 +10,7 @@ import { ProfileEditForm } from "@/components/profile/profile-edit-form";
 import { ChangePasswordForm } from "@/components/profile/change-password-form";
 import { employeeLiveStatus } from "@/lib/profile/status";
 
-export const metadata: Metadata = { title: "My profile · Operix" };
+export const metadata: Metadata = { title: "My profile · Oprix" };
 
 export default async function ProfilePage() {
   const session = await requirePage();
@@ -44,7 +44,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="My profile" description="Update how you appear across Operix." />
+      <PageHeader title="My profile" description="Update how you appear across Oprix." />
       <Card className="p-6">
         <div className="mb-6 flex items-start justify-between gap-4 border-b border-line pb-5">
           <div className="flex items-center gap-4">

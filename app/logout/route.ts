@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // sessions here instead of straight to /login.
 export async function GET(req: Request) {
   const res = NextResponse.redirect(new URL("/login", req.url));
-  res.cookies.set("operix_session", "", {
+  res.cookies.set("oprix_session", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

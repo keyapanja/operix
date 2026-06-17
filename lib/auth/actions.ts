@@ -166,7 +166,7 @@ export async function requestPasswordReset(
       await sendPasswordResetEmail({
         to: email,
         name: user.employee?.fullName ?? user.client?.name ?? email.split("@")[0],
-        companyName: user.company?.name ?? "Operix",
+        companyName: user.company?.name ?? "Oprix",
         link: appUrl(`/set-password?token=${token}&reset=1`),
       });
     } catch (e) {

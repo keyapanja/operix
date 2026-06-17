@@ -13,7 +13,7 @@ import { BarList, DonutChart } from "@/components/reports/charts";
 import { colorAt, colorFor } from "@/lib/reports/colors";
 import { rangeWindow } from "@/lib/reports/range";
 
-export const metadata: Metadata = { title: "Reports · Operix" };
+export const metadata: Metadata = { title: "Reports · Oprix" };
 
 const fmtH = (h: number) => `${Math.round(h * 10) / 10}h`;
 const STATUS_COLOR: Record<TaskStatus, string> = {

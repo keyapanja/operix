@@ -7,7 +7,7 @@ import { BackLink } from "@/components/ui/back-link";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icons";
 
-export const metadata: Metadata = { title: "Announcement · Operix" };
+export const metadata: Metadata = { title: "Announcement · Oprix" };
 
 export default async function AnnouncementPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -11,7 +11,7 @@ import { ContactForm } from "@/components/clients/contact-form";
 import { PortalAccess, type PortalStatus } from "@/components/clients/portal-access";
 import { BackLink } from "@/components/ui/back-link";
 
-export const metadata: Metadata = { title: "Client · Operix" };
+export const metadata: Metadata = { title: "Client · Oprix" };
 
 export default async function ClientDetailPage({
   params,

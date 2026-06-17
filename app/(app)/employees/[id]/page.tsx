@@ -14,7 +14,7 @@ import { EmergencyContactForm } from "@/components/employees/emergency-contact-f
 import { DeleteEmployeeButton } from "@/components/employees/delete-employee-button";
 import { ResendInvite } from "@/components/employees/resend-invite";
 
-export const metadata: Metadata = { title: "Employee · Operix" };
+export const metadata: Metadata = { title: "Employee · Oprix" };
 
 export default async function EmployeeDetailPage({
   params,

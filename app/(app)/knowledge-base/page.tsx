@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { KbList, type KbItem } from "@/components/kb/kb-list";
 
-export const metadata: Metadata = { title: "Knowledge Base · Operix" };
+export const metadata: Metadata = { title: "Knowledge Base · Oprix" };
 
 export default async function KnowledgeBasePage() {
   const session = await requirePage(); // accessible to everyone

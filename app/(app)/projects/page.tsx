@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/icons";
 import { humanizeEnum, formatDate } from "@/lib/format";
 import { PROJECT_STATUS_TONE, PRIORITY_TONE } from "@/lib/status";
 
-export const metadata: Metadata = { title: "Projects · Operix" };
+export const metadata: Metadata = { title: "Projects · Oprix" };
 
 export default async function ProjectsPage() {
   const session = await requirePage("project:manage");

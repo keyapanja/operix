@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
 
-export const metadata: Metadata = { title: "Monthly attendance · Operix" };
+export const metadata: Metadata = { title: "Monthly attendance · Oprix" };
 
 const CELL: Record<string, { cls: string; label: string }> = {
   PRESENT: { cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300", label: "P" },

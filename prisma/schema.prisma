@@ -1,4 +1,4 @@
-// Operix — Phase 1 data model
+// Oprix — Phase 1 data model
 // PostgreSQL + Prisma. Multi-tenant: every tenant-owned row carries companyId.
 // Money is stored in integer minor units (paise). Timestamps are UTC.
 // See docs/REFERENCE.md § 2 (Architecture) for the reasoning behind these choices.

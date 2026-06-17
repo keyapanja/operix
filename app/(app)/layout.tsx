@@ -94,7 +94,7 @@ export default async function AppLayout({
       <Sidebar
         allowed={allowed}
         company={{
-          name: company?.name ?? "Operix",
+          name: company?.name ?? "Oprix",
           tagline: company?.tagline || company?.businessType || null,
           logoUrl: company?.logoUrl ?? null,
         }}

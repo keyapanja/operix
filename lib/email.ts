@@ -36,7 +36,7 @@ export async function sendMail(opts: {
     return { delivered: false };
   }
   await t.sendMail({
-    from: process.env.SMTP_FROM ?? "Operix <no-reply@operix.app>",
+    from: process.env.SMTP_FROM ?? "Oprix <no-reply@oprix.app>",
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
@@ -55,7 +55,7 @@ export async function sendInviteEmail(opts: {
     <h2 style="color:#059669;margin:0 0 8px">Welcome to ${escapeHtml(opts.companyName)}</h2>
     <p style="color:#334155;font-size:14px;line-height:1.6">
       Hi ${escapeHtml(opts.name)}, you've been added to <strong>${escapeHtml(opts.companyName)}</strong>
-      on Operix. Set your password to access your account.
+      on Oprix. Set your password to access your account.
     </p>
     <p style="margin:24px 0">
       <a href="${opts.link}" style="background:#059669;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;display:inline-block">
@@ -69,7 +69,7 @@ export async function sendInviteEmail(opts: {
   </div>`;
   return sendMail({
     to: opts.to,
-    subject: `You've been added to ${opts.companyName} on Operix`,
+    subject: `You've been added to ${opts.companyName} on Oprix`,
     html,
   });
 }
@@ -84,7 +84,7 @@ export async function sendPasswordResetEmail(opts: {
   <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
     <h2 style="color:#059669;margin:0 0 8px">Reset your password</h2>
     <p style="color:#334155;font-size:14px;line-height:1.6">
-      Hi ${escapeHtml(opts.name)}, we got a request to reset your Operix password for
+      Hi ${escapeHtml(opts.name)}, we got a request to reset your Oprix password for
       <strong>${escapeHtml(opts.companyName)}</strong>. Choose a new one below.
     </p>
     <p style="margin:24px 0">
@@ -98,7 +98,7 @@ export async function sendPasswordResetEmail(opts: {
       <span style="color:#475569">${opts.link}</span>
     </p>
   </div>`;
-  return sendMail({ to: opts.to, subject: "Reset your Operix password", html });
+  return sendMail({ to: opts.to, subject: "Reset your Oprix password", html });
 }
 
 function escapeHtml(s: string): string {

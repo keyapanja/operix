@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { BackLink } from "@/components/ui/back-link";
 import { SalariesManager } from "@/components/payroll/salaries-manager";
 
-export const metadata: Metadata = { title: "Salary structures · Operix" };
+export const metadata: Metadata = { title: "Salary structures · Oprix" };
 
 export default async function SalariesPage() {
   const session = await requirePage("payroll:manage");

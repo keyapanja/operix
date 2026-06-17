@@ -16,7 +16,7 @@ import { DeliverablesPanel } from "@/components/projects/deliverables-panel";
 import { BackLink } from "@/components/ui/back-link";
 import type { KanbanTask } from "@/lib/projects/actions";
 
-export const metadata: Metadata = { title: "Project · Operix" };
+export const metadata: Metadata = { title: "Project · Oprix" };
 
 export default async function ProjectDetailPage({
   params,

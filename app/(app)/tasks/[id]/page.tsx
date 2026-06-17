@@ -22,7 +22,7 @@ import { getMyTaskTimer, taskTrackedSeconds } from "@/lib/timer/data";
 import { canUseTimer } from "@/lib/timer/finalize";
 import { fmtHm } from "@/lib/timer/shared";
 
-export const metadata: Metadata = { title: "Task · Operix" };
+export const metadata: Metadata = { title: "Task · Oprix" };
 
 function fmtDateTime(d: Date): string {
   return new Date(d).toLocaleString("en-IN", {

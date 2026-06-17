@@ -276,7 +276,7 @@ export default async function DashboardPage() {
           <div className="relative">
             <h2 className="text-lg font-semibold text-content">Getting started</h2>
             <p className="mt-1 max-w-md text-sm text-muted">
-              Set up your organization structure, then add your people to bring Operix to life.
+              Set up your organization structure, then add your people to bring Oprix to life.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link href="/organization" className="gradient-brand-strong inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white shadow-brand transition-all hover:brightness-110 active:scale-[0.98]">

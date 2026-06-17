@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { SetPasswordForm } from "./set-password-form";
 
-export const metadata: Metadata = { title: "Set password · Operix" };
+export const metadata: Metadata = { title: "Set password · Oprix" };
 
 export default async function SetPasswordPage({
   searchParams,
@@ -33,7 +33,7 @@ export default async function SetPasswordPage({
           <span className="gradient-brand flex size-9 items-center justify-center rounded-xl text-sm font-bold text-white">
             Op
           </span>
-          <span className="font-display text-xl font-bold tracking-tight text-content">Operix</span>
+          <span className="font-display text-xl font-bold tracking-tight text-content">Oprix</span>
         </div>
 
         {valid ? (

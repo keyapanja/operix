@@ -1,6 +1,6 @@
-# Operix — Reference
+# Oprix — Reference
 
-The single design/setup reference for Operix. **Current build state** (what's
+The single design/setup reference for Oprix. **Current build state** (what's
 live, conventions, what's pending) lives in [`STATUS.md`](STATUS.md); this file
 is the slower-moving *how it's built and why*.
 
@@ -10,7 +10,7 @@ Contents:
 3. [Build roadmap](#3-build-roadmap)
 4. [Companion browser extension — design](#4-companion-browser-extension--design)
 
-The functional spec (what each module does) lives in `Operix.pdf`. The data
+The functional spec (what each module does) lives in `Oprix.pdf`. The data
 model is `prisma/schema.prisma`. Day-to-day load/use of the extension is in
 [`extension/README.md`](../extension/README.md).
 
@@ -22,7 +22,7 @@ Prerequisites: Node 22+, npm 10+. Database: Supabase (free tier is fine).
 
 ### 1.1 Create the Supabase database
 1. [supabase.com](https://supabase.com) → sign in → **New project**.
-2. Name it `operix`, set a strong **database password** (save it), pick a nearby region.
+2. Name it `oprix`, set a strong **database password** (save it), pick a nearby region.
 3. Wait ~2 min to provision.
 4. **Project Settings → Database → Connection string** — you need two URLs:
    - **Transaction pooler** (port `6543`, add `?pgbouncer=true`) → `DATABASE_URL` (runtime).
@@ -50,7 +50,7 @@ npm run dev              # http://localhost:3000
 > **Shared / production DB:** use **`db:push` only — never `db:seed`** (it would
 > wipe/replace real data). Seeding is only for a *fresh, empty, local* database:
 > `npm run db:seed` creates a demo company + Super Admin
-> (`admin@operix.test` / `ChangeMe123!` — change after first login).
+> (`admin@oprix.test` / `ChangeMe123!` — change after first login).
 
 > **Windows dev caveat:** stop the dev server (free port 3000) before
 > `db:push` — a running server holds the Prisma engine DLL and `prisma generate`
@@ -83,7 +83,7 @@ Two things that silently break the connection:
 > Unified business-operations platform for service businesses: HR, projects,
 > attendance, payroll, clients, reporting — one system.
 
-This section is the source of truth for *how* Operix is built.
+This section is the source of truth for *how* Oprix is built.
 
 ### 2.1 Tech stack (as designed; see STATUS.md for what's actually wired)
 | Layer | Choice | Why |
@@ -245,7 +245,7 @@ customizable and persist across devices.
 
 ### 4.2 Why a new API was required
 The app was 100% Server Actions with **zero route handlers**. The session is one
-**httpOnly** `operix_session` cookie (jose HS256, `sameSite=lax`) the extension
+**httpOnly** `oprix_session` cookie (jose HS256, `sameSite=lax`) the extension
 JS can't read and which won't ride cross-site fetches → it needs a **bearer
 token** and a dedicated JSON API (`/api/ext/v1/*`), exempted in `proxy.ts` and
 given its own CORS. Timer/checklist/KB logic is reused via shared cores (not
@@ -260,7 +260,7 @@ reinvented), and the same capabilities/task-scope authz applies.
 │  Popup (connect/settings)   chrome.storage(token,prefs) │ Bearer│
 └─────────────────────────────────────────────────────────│──────┘
                                                            ▼ HTTPS
-                         Operix (Next.js 16)
+                         Oprix (Next.js 16)
                           proxy.ts ── exempt /api/ext/* ──┐
                           app/api/ext/v1/* route handlers │
                             ↳ bearer auth (ExtensionToken)│
@@ -269,7 +269,7 @@ reinvented), and the same capabilities/task-scope authz applies.
                           Prisma → PostgreSQL ◀──────────┘
 ```
 **Key MV3 rule:** the content script never calls the API directly — it messages
-the **background service worker** (which holds `host_permissions` for the Operix
+the **background service worker** (which holds `host_permissions` for the Oprix
 origin and makes the authenticated fetch). SWs are ephemeral → never rely on
 in-memory state; persist to `chrome.storage`, wake via `chrome.alarms`.
 
@@ -280,7 +280,7 @@ in-memory state; persist to `chrome.storage`, wake via `chrome.alarms`.
   "connected devices / sign out everywhere" primitive for the web app.
 - **Connect flow (preferred):** `chrome.identity.launchWebAuthFlow` opens the
   gated `/connect-extension` page; the user authenticates with their normal
-  Operix login (no password ever entered in the extension); a Server Action mints
+  Oprix login (no password ever entered in the extension); a Server Action mints
   the token and redirects it back. **Fallback:** rate-limited
   `POST /api/ext/v1/auth/login` (email+password) — used in the localhost build.
 - **Request auth:** every call sends `Authorization: Bearer <token>`;
@@ -321,12 +321,12 @@ skew for the client-side live timer.
   disclosure for store review. CSP `connect-src` pinned to the API origin.
 
 ### 4.7 Repo & cross-browser
-- **`extension/`** folder in the Operix repo (monorepo) so it shares the contract
+- **`extension/`** folder in the Oprix repo (monorepo) so it shares the contract
   and ships alongside the API. The localhost build is a **plain MV3 extension
   (no build step)** — load the folder unpacked. (The original plan targeted WXT +
   React 19 + Tailwind v4 for the polished cross-browser build.)
 - **Chrome + Edge** identical bundle; **Firefox** MV3 with minor `browser.*`
   differences; **Safari** needs an Xcode wrapper — deferred.
-- **Going to production:** point `host_permissions` + the extension's "Operix
+- **Going to production:** point `host_permissions` + the extension's "Oprix
   address" at the live origin and set `EXTENSION_ORIGINS` on the server — config
   only, no rearchitecture (see `extension/README.md`).

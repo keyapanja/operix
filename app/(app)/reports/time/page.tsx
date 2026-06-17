@@ -10,7 +10,7 @@ import { ExportButtons } from "@/components/reports/export-buttons";
 import { colorAt, colorFor } from "@/lib/reports/colors";
 import { resolveWindow, granularityFor, buckets, bucketKey } from "@/lib/reports/range";
 
-export const metadata: Metadata = { title: "Time report · Operix" };
+export const metadata: Metadata = { title: "Time report · Oprix" };
 
 const fmtH = (h: number) => `${Math.round(h * 10) / 10}h`;
 const r1 = (h: number) => Math.round(h * 10) / 10;
@@ -118,7 +118,7 @@ export default async function TimeReportPage({
 
       <Section
         title="Per-person breakdown"
-        action={<ExportButtons name={`time-${range}`} title={`Operix — Time report (${label})`} table={exportTable} />}
+        action={<ExportButtons name={`time-${range}`} title={`Oprix — Time report (${label})`} table={exportTable} />}
       >
         {personRows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No time logged in this range.</p>

@@ -13,7 +13,7 @@ import { canUseTimer } from "@/lib/timer/finalize";
 import type { TaskTimerState } from "@/lib/timer/shared";
 import { resolveTaskScope, taskScopeWhere, TASK_SCOPE_LABELS } from "@/lib/tasks/visibility";
 
-export const metadata: Metadata = { title: "Tasks · Operix" };
+export const metadata: Metadata = { title: "Tasks · Oprix" };
 
 export default async function TasksPage({
   searchParams,

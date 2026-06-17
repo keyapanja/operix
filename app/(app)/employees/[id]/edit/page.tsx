@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmployeeForm } from "@/components/employees/employee-form";
 
-export const metadata: Metadata = { title: "Edit employee · Operix" };
+export const metadata: Metadata = { title: "Edit employee · Oprix" };
 
 const ymd = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : null);
 

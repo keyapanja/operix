@@ -58,7 +58,7 @@ export function printPDF(title: string, sections: { heading?: string; table: Tab
     .join("");
   w.document.write(
     `<html><head><title>${esc(title)}</title><style>${style}</style></head><body>` +
-      `<h1>${esc(title)}</h1><small>Operix · generated ${new Date().toLocaleString("en-IN")}</small>` +
+      `<h1>${esc(title)}</h1><small>Oprix · generated ${new Date().toLocaleString("en-IN")}</small>` +
       `${body}<script>window.onload=function(){window.print()}</script></body></html>`,
   );
   w.document.close();

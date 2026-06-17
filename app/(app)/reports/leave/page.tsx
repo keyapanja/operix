@@ -12,7 +12,7 @@ import { ExportButtons } from "@/components/reports/export-buttons";
 import { colorAt, colorFor } from "@/lib/reports/colors";
 import { resolveWindow } from "@/lib/reports/range";
 
-export const metadata: Metadata = { title: "Leave report · Operix" };
+export const metadata: Metadata = { title: "Leave report · Oprix" };
 
 const STATUS_COLOR: Record<ApprovalStatus, string> = {
   PENDING: "#f59e0b",
@@ -110,7 +110,7 @@ export default async function LeaveReportPage({
 
       <Section
         title="Leave requests"
-        action={<ExportButtons name={`leave-${range}`} title={`Operix — Leave (${label})`} table={exportTable} />}
+        action={<ExportButtons name={`leave-${range}`} title={`Oprix — Leave (${label})`} table={exportTable} />}
       >
         {reqs.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No leave requests in this range.</p>

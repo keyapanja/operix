@@ -11,7 +11,7 @@ import type { ExtActiveResponse, ExtKbLink, ExtTask } from "@/shared/ext-contrac
 // The dock's feed = the logged-in user's OWN actionable tasks: assigned to them
 // (TaskAssignee) and in a WORK state (To Do / In Progress / Redo). Submitting a
 // task for review moves it to REVIEW, so it leaves this set and disappears from
-// the dock. Everything else lives in the Operix web app. Each task carries its
+// the dock. Everything else lives in the Oprix web app. Each task carries its
 // timer state, checklist, and related KB guides. The live timer ticks
 // client-side from `timer.runStartedAtMs`, so this is only fetched on a poll.
 // ---------------------------------------------------------------------------

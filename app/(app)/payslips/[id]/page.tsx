@@ -10,7 +10,7 @@ import { PrintButton } from "@/components/payroll/print-button";
 import { PayslipAdjust } from "@/components/payroll/payslip-adjust";
 import { formatINR, periodLabel } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Payslip · Operix" };
+export const metadata: Metadata = { title: "Payslip · Oprix" };
 
 const PRINT_CSS = `@media print {
   aside, header, .no-print { display: none !important; }

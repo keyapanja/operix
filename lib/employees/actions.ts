@@ -310,7 +310,7 @@ export async function resendInvite(
     const res = await sendInviteEmail({
       to: employee.email,
       name: employee.fullName,
-      companyName: company?.name ?? "Operix",
+      companyName: company?.name ?? "Oprix",
       link: appUrl(`/set-password?token=${token}`),
     });
     delivered = res.delivered;

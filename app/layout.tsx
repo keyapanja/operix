@@ -15,12 +15,12 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Operix",
+  title: "Oprix",
   description: "Unified business operations platform",
 };
 
 // Runs before paint to apply the saved/system theme and avoid a flash.
-const themeScript = `(function(){try{var t=localStorage.getItem('operix-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
+const themeScript = `(function(){try{var t=localStorage.getItem('oprix-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
 
 export default function RootLayout({
   children,

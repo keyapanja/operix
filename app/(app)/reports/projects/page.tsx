@@ -11,7 +11,7 @@ import { BarList, DonutChart } from "@/components/reports/charts";
 import { ExportButtons } from "@/components/reports/export-buttons";
 import { colorAt } from "@/lib/reports/colors";
 
-export const metadata: Metadata = { title: "Projects report · Operix" };
+export const metadata: Metadata = { title: "Projects report · Oprix" };
 
 const fmtH = (h: number) => `${Math.round(h * 10) / 10}h`;
 const r1 = (h: number) => Math.round(h * 10) / 10;
@@ -119,7 +119,7 @@ export default async function ProjectsReportPage() {
 
       <Section
         title="Project breakdown"
-        action={<ExportButtons name="projects" title="Operix — Projects report" table={exportTable} />}
+        action={<ExportButtons name="projects" title="Oprix — Projects report" table={exportTable} />}
       >
         {rows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No projects yet.</p>

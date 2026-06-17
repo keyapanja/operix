@@ -1,4 +1,4 @@
-# Operix — Build Status Snapshot
+# Oprix — Build Status Snapshot
 
 Compact current-state reference. See **`docs/REFERENCE.md`** for local setup,
 architecture & design rationale, the build roadmap, and the companion-extension

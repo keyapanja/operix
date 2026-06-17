@@ -12,7 +12,7 @@ import { prisma } from "@/lib/db";
 // role, and the linked employee/client id.
 // ---------------------------------------------------------------------------
 
-const COOKIE_NAME = "operix_session";
+const COOKIE_NAME = "oprix_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
 export type SessionUser = {

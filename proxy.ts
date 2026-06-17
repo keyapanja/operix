@@ -7,7 +7,7 @@ import { jwtVerify } from "jose";
 // never see it. (Server Actions still re-check ownership; the proxy is only the
 // first line — see lib/auth/guard.ts requirePortal + per-action clientId checks.)
 
-const COOKIE_NAME = "operix_session";
+const COOKIE_NAME = "oprix_session";
 const PUBLIC_PATHS = ["/login", "/set-password", "/forgot-password"];
 
 function secret(): Uint8Array {

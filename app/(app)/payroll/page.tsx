@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/icons";
 import { CreateRunForm } from "@/components/payroll/create-run-form";
 import { formatINR, periodLabel } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Payroll · Operix" };
+export const metadata: Metadata = { title: "Payroll · Oprix" };
 
 const STATUS: Record<string, { tone: "gray" | "amber" | "green"; label: string }> = {
   DRAFT: { tone: "gray", label: "Draft" },

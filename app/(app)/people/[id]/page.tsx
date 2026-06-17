@@ -8,7 +8,7 @@ import { BackLink } from "@/components/ui/back-link";
 import { Avatar } from "@/components/ui/avatar";
 import { employeeLiveStatus } from "@/lib/profile/status";
 
-export const metadata: Metadata = { title: "Profile · Operix" };
+export const metadata: Metadata = { title: "Profile · Oprix" };
 
 export default async function PersonProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

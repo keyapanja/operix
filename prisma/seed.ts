@@ -10,7 +10,7 @@ async function main() {
     update: {},
     create: {
       id: "demo-company",
-      name: "Operix Demo Pvt Ltd",
+      name: "Oprix Demo Pvt Ltd",
       timezone: "Asia/Kolkata",
       currency: "INR",
       businessType: "Software Services",
@@ -18,7 +18,7 @@ async function main() {
   });
 
   // Super Admin login
-  const email = "admin@operix.test";
+  const email = "admin@oprix.test";
   const passwordHash = await bcrypt.hash("ChangeMe123!", 10);
 
   await prisma.user.upsert({

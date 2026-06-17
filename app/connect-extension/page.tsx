@@ -3,7 +3,7 @@ import { requirePage } from "@/lib/auth/guard";
 import { isExtensionRedirect } from "@/lib/ext/url";
 import { authorizeExtension } from "./actions";
 
-export const metadata: Metadata = { title: "Connect extension · Operix" };
+export const metadata: Metadata = { title: "Connect extension · Oprix" };
 
 // Web-authorize step of the extension connect flow. The proxy already requires a
 // logged-in staff session to reach this page, so by here the user is who the
@@ -23,7 +23,7 @@ export default async function ConnectExtensionPage({
   return (
     <main className="flex min-h-screen items-center justify-center bg-canvas px-4">
       <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-8 shadow-card">
-        <div className="mb-1 text-sm font-semibold text-brand-600">Operix Companion</div>
+        <div className="mb-1 text-sm font-semibold text-brand-600">Oprix Companion</div>
         <h1 className="text-xl font-semibold text-content">Connect your browser extension</h1>
 
         {valid ? (

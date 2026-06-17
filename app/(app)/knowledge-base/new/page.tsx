@@ -5,7 +5,7 @@ import { BackLink } from "@/components/ui/back-link";
 import { PageHeader } from "@/components/ui/page-header";
 import { KbForm } from "@/components/kb/kb-form";
 
-export const metadata: Metadata = { title: "New article · Operix" };
+export const metadata: Metadata = { title: "New article · Oprix" };
 
 export default async function NewArticlePage() {
   const session = await requirePage();

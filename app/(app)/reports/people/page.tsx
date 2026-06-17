@@ -11,7 +11,7 @@ import { ExportButtons } from "@/components/reports/export-buttons";
 import { colorFor } from "@/lib/reports/colors";
 import { resolveWindow } from "@/lib/reports/range";
 
-export const metadata: Metadata = { title: "People report · Operix" };
+export const metadata: Metadata = { title: "People report · Oprix" };
 
 const fmtH = (h: number) => `${Math.round(h * 10) / 10}h`;
 const r1 = (h: number) => Math.round(h * 10) / 10;
@@ -103,7 +103,7 @@ export default async function PeopleReportPage({
 
       <Section
         title="Per-person detail"
-        action={<ExportButtons name={`people-${range}`} title={`Operix — People report (${label})`} table={exportTable} />}
+        action={<ExportButtons name={`people-${range}`} title={`Oprix — People report (${label})`} table={exportTable} />}
       >
         {rows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">No employees yet.</p>

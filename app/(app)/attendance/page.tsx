@@ -12,7 +12,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 
-export const metadata: Metadata = { title: "Attendance · Operix" };
+export const metadata: Metadata = { title: "Attendance · Oprix" };
 
 const SUMMARY = [
   { key: "PRESENT", label: "Present", dot: "bg-emerald-500" },

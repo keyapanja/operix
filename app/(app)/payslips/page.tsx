@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icons";
 import { formatINR, periodLabel } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Payslips · Operix" };
+export const metadata: Metadata = { title: "Payslips · Oprix" };
 
 export default async function PayslipsPage() {
   const session = await requirePage();

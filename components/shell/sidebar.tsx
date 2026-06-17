@@ -7,8 +7,8 @@ import { NAV, NAV_SOON } from "@/lib/nav";
 import { Icon } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
 
-const COLLAPSE_KEY = "operix:sidebar:collapsed";
-const EXPANDED_KEY = "operix:sidebar:expanded";
+const COLLAPSE_KEY = "oprix:sidebar:collapsed";
+const EXPANDED_KEY = "oprix:sidebar:expanded";
 
 export function Sidebar({
   allowed,
@@ -89,7 +89,7 @@ export function Sidebar({
         </span>
         {!collapsed && (
           <>
-            <span className="font-display text-lg font-bold tracking-tight text-content">Operix</span>
+            <span className="font-display text-lg font-bold tracking-tight text-content">Oprix</span>
             <button
               onClick={toggleCollapsed}
               aria-label="Collapse sidebar"

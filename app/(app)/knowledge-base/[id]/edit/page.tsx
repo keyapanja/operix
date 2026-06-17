@@ -6,7 +6,7 @@ import { BackLink } from "@/components/ui/back-link";
 import { PageHeader } from "@/components/ui/page-header";
 import { KbForm } from "@/components/kb/kb-form";
 
-export const metadata: Metadata = { title: "Edit article · Operix" };
+export const metadata: Metadata = { title: "Edit article · Oprix" };
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

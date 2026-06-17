@@ -6,7 +6,7 @@ import { nextEmployeeCode } from "@/lib/employees/code";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmployeeForm } from "@/components/employees/employee-form";
 
-export const metadata: Metadata = { title: "Add employee · Operix" };
+export const metadata: Metadata = { title: "Add employee · Oprix" };
 
 export default async function NewEmployeePage() {
   const session = await requirePage("employee:manage");

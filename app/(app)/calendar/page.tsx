@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { CalendarAdminControls } from "@/components/calendar/admin-controls";
 
-export const metadata: Metadata = { title: "Calendar · Operix" };
+export const metadata: Metadata = { title: "Calendar · Oprix" };
 
 export default async function CalendarPage({
   searchParams,

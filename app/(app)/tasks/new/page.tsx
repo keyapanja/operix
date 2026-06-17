@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { NewTaskForm } from "@/components/tasks/new-task-form";
 
-export const metadata: Metadata = { title: "New task · Operix" };
+export const metadata: Metadata = { title: "New task · Oprix" };
 
 export default async function NewTaskPage() {
   const session = await requirePage("task:manage");

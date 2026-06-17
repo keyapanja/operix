@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { humanizeEnum } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Employees · Operix" };
+export const metadata: Metadata = { title: "Employees · Oprix" };
 
 export default async function EmployeesPage() {
   const session = await requirePage("employee:read");

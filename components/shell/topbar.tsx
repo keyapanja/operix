@@ -42,7 +42,7 @@ export function Topbar({
   return (
     <header className="glass sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-line px-6">
       <div className="font-display text-lg font-bold tracking-tight text-content lg:hidden">
-        Operix
+        Oprix
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">

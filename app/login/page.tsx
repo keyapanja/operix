@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LoginForm } from "./login-form";
 import { Icon } from "@/components/ui/icons";
 
-export const metadata: Metadata = { title: "Sign in · Operix" };
+export const metadata: Metadata = { title: "Sign in · Oprix" };
 
 const FEATURES = [
   "Employees, attendance & payroll in one place",
@@ -29,7 +29,7 @@ export default async function LoginPage({
           <span className="flex size-10 items-center justify-center rounded-xl bg-white/15 text-sm font-bold backdrop-blur">
             Op
           </span>
-          <span className="text-2xl font-bold tracking-tight">Operix</span>
+          <span className="text-2xl font-bold tracking-tight">Oprix</span>
         </div>
 
         <div className="relative z-10 space-y-6">
@@ -51,7 +51,7 @@ export default async function LoginPage({
         </div>
 
         <div className="relative z-10 text-sm text-brand-200">
-          © {new Date().getFullYear()} Operix · Business Operations Platform
+          © {new Date().getFullYear()} Oprix · Business Operations Platform
         </div>
       </div>
 
@@ -63,7 +63,7 @@ export default async function LoginPage({
               <span className="gradient-brand flex size-9 items-center justify-center rounded-xl text-sm font-bold text-white">
                 Op
               </span>
-              <span className="font-display text-xl font-bold tracking-tight text-content">Operix</span>
+              <span className="font-display text-xl font-bold tracking-tight text-content">Oprix</span>
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-content">
               Welcome back

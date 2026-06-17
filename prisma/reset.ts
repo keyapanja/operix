@@ -1,5 +1,5 @@
 /**
- * Operix — database reset for go-live.
+ * Oprix — database reset for go-live.
  *
  * SAFE BY DEFAULT: with no flag it only PRINTS row counts (read-only).
  * It wipes + reseeds ONLY when run with `--confirm`.

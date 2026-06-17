@@ -6,7 +6,7 @@ import { BackLink } from "@/components/ui/back-link";
 import { StatutorySettings } from "@/components/payroll/statutory-settings";
 import { PtSlabsManager } from "@/components/payroll/pt-slabs-manager";
 
-export const metadata: Metadata = { title: "Payroll settings · Operix" };
+export const metadata: Metadata = { title: "Payroll settings · Oprix" };
 
 export default async function PayrollSettingsPage() {
   const session = await requirePage("payroll:manage");

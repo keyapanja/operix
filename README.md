@@ -1,4 +1,4 @@
-# Operix
+# Oprix
 
 A multi-tenant **business-operations platform** for service businesses — HR,
 attendance, leave, projects & tasks, time tracking, clients + a client portal,

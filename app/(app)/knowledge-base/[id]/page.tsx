@@ -12,7 +12,7 @@ import { Icon } from "@/components/ui/icons";
 import { renderMarkdown } from "@/lib/kb/markdown";
 import { DeleteArticleButton } from "@/components/kb/delete-article-button";
 
-export const metadata: Metadata = { title: "Article · Operix" };
+export const metadata: Metadata = { title: "Article · Oprix" };
 
 export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

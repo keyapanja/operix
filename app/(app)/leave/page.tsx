@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/format";
 import { ApplyForm } from "@/components/leave/apply-form";
 import { LeaveTabs } from "@/components/leave/leave-tabs";
 
-export const metadata: Metadata = { title: "Leave · Operix" };
+export const metadata: Metadata = { title: "Leave · Oprix" };
 
 const TONE: Record<string, { tone: "gray" | "blue" | "green" | "red"; label: string }> = {
   PENDING: { tone: "gray", label: "Pending" },

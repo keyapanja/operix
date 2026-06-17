@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { OrgTabs } from "@/components/org/org-tabs";
 
-export const metadata: Metadata = { title: "Organization · Operix" };
+export const metadata: Metadata = { title: "Organization · Oprix" };
 
 export default async function OrganizationPage() {
   const session = await requirePage("org:manage");

@@ -1,12 +1,12 @@
-// Operix Companion — content script: the floating dock.
+// Oprix Companion — content script: the floating dock.
 // Renders inside a Shadow DOM (isolated from the host page). Reads NOTHING from
 // the page; only talks to the background worker via chrome.runtime messaging.
 
 (() => {
-  if (window.__operixDockLoaded) return; // guard against double injection
-  window.__operixDockLoaded = true;
+  if (window.__oprixDockLoaded) return; // guard against double injection
+  window.__oprixDockLoaded = true;
 
-  const PREFS_KEY = "operix_prefs";
+  const PREFS_KEY = "oprix_prefs";
   const DEFAULT_PREFS = {
     enabled: true,
     dock: "right",
@@ -126,13 +126,13 @@
     await chrome.storage.sync.set({ [PREFS_KEY]: state.prefs });
   }
 
-  function operixOrigin() {
+  function oprixOrigin() {
     return (state.prefs.apiOrigin || "http://localhost:3000").replace(/\/+$/, "");
   }
-  // The dock is redundant on the Operix app itself — hide it there.
-  function onOperixSite() {
+  // The dock is redundant on the Oprix app itself — hide it there.
+  function onOprixSite() {
     try {
-      return location.origin.replace(/\/+$/, "") === operixOrigin();
+      return location.origin.replace(/\/+$/, "") === oprixOrigin();
     } catch {
       return false;
     }
@@ -142,7 +142,7 @@
   function ensureHost() {
     if (host) return;
     host = document.createElement("div");
-    host.id = "operix-companion-dock";
+    host.id = "oprix-companion-dock";
     shadow = host.attachShadow({ mode: "open" });
     const style = document.createElement("style");
     style.textContent = CSS;
@@ -153,7 +153,7 @@
   }
 
   function applyShell() {
-    if (!state.prefs.enabled || onOperixSite()) {
+    if (!state.prefs.enabled || onOprixSite()) {
       if (host) host.style.display = "none";
       return;
     }
@@ -205,7 +205,7 @@
 
   function render() {
     applyShell();
-    if (!state.prefs.enabled || onOperixSite() || !panel) return;
+    if (!state.prefs.enabled || onOprixSite() || !panel) return;
     panel.textContent = "";
 
     if (state.prefs.collapsed) {
@@ -224,7 +224,7 @@
           h(
             "div",
             { class: "empty" },
-            "No running tasks. Start a timer on a task in Operix and it'll show up here.",
+            "No running tasks. Start a timer on a task in Oprix and it'll show up here.",
           ),
         );
       } else {
@@ -258,7 +258,7 @@
       pill.append(h("span", { class: "pill-badge" }, String(tasks.length)));
     } else {
       pill.append(
-        h("span", { class: "pill-label" }, tasks.length ? `${tasks.length} ${tasks.length > 1 ? "tasks" : "task"}` : "Operix"),
+        h("span", { class: "pill-label" }, tasks.length ? `${tasks.length} ${tasks.length > 1 ? "tasks" : "task"}` : "Oprix"),
       );
     }
     makeChipDraggable(pill);
@@ -314,14 +314,14 @@
 
   function renderHeader() {
     const dot = h("span", { class: "dot" + (state.connected ? " on" : "") });
-    const title = h("span", { class: "title" }, h("span", { class: "logo", html: I.logo }), "Operix");
+    const title = h("span", { class: "title" }, h("span", { class: "logo", html: I.logo }), "Oprix");
     const spacer = h("span", { class: "spacer" });
     const btns = h("span", { class: "hbtns" });
     if (state.connected)
       btns.append(
         iconBtn(I.refresh, "Refresh", async (b) => {
           b.classList.add("spin");
-          await send({ type: "OPERIX_REFRESH" });
+          await send({ type: "OPRIX_REFRESH" });
           b.classList.remove("spin");
         }),
       );
@@ -338,21 +338,21 @@
 
   function renderConnect() {
     const wrap = h("div", { class: "connect" });
-    wrap.append(h("div", { class: "connect-msg" }, "Connect to Operix to see your running tasks here."));
+    wrap.append(h("div", { class: "connect-msg" }, "Connect to Oprix to see your running tasks here."));
     const btn = h("button", {
       class: "btn primary",
       onclick: async (e) => {
         const b = e.currentTarget;
         b.disabled = true;
-        b.textContent = "Opening Operix…";
-        const r = await send({ type: "OPERIX_CONNECT" });
+        b.textContent = "Opening Oprix…";
+        const r = await send({ type: "OPRIX_CONNECT" });
         if (!r || !r.ok) {
           state.error = (r && r.error) || "Connect failed";
           render();
         }
       },
     });
-    btn.textContent = "Connect to Operix";
+    btn.textContent = "Connect to Oprix";
     wrap.append(btn);
     if (state.error) wrap.append(h("div", { class: "connect-err" }, state.error));
     return wrap;
@@ -370,7 +370,7 @@
     const accent = h("span", { class: "accent", style: `background:${PRIORITY_TONE[t.priority] || "#64748b"}` });
     const name = h("button", {
       class: "task-name",
-      title: "Open in Operix",
+      title: "Open in Oprix",
       onclick: () => window.open(t.webUrl, "_blank", "noopener"),
     });
     name.textContent = t.name;
@@ -433,13 +433,13 @@
         if (state.busy.has(taskId)) return;
         state.busy.add(taskId);
         e.currentTarget.classList.add("busy");
-        const r = await send({ type: "OPERIX_TIMER", taskId, action });
+        const r = await send({ type: "OPRIX_TIMER", taskId, action });
         state.busy.delete(taskId);
         if (!r || !r.ok) {
           state.error = (r && r.error) || "Action failed";
           render();
         }
-        // success → background broadcasts OPERIX_UPDATE which re-renders
+        // success → background broadcasts OPRIX_UPDATE which re-renders
       },
     });
   }
@@ -472,7 +472,7 @@
             // optimistic
             c.isDone = !c.isDone;
             render();
-            const r = await send({ type: "OPERIX_CHECKLIST", itemId: c.id, isDone: c.isDone });
+            const r = await send({ type: "OPRIX_CHECKLIST", itemId: c.id, isDone: c.isDone });
             state.busy.delete(c.id);
             if (!r || !r.ok) {
               c.isDone = !c.isDone; // rollback
@@ -541,7 +541,7 @@
       btn.disabled = true;
       btn.textContent = "Submitting…";
       err.textContent = "";
-      const r = await send({ type: "OPERIX_SUBMIT", taskId: t.id, finalLink: link });
+      const r = await send({ type: "OPRIX_SUBMIT", taskId: t.id, finalLink: link });
       if (!r || !r.ok) {
         err.textContent = (r && r.error) || "Submit failed";
         btn.disabled = false;
@@ -577,7 +577,7 @@
   // ---- incoming messages from background ----
   chrome.runtime.onMessage.addListener((msg) => {
     if (!msg) return;
-    if (msg.type === "OPERIX_UPDATE") {
+    if (msg.type === "OPRIX_UPDATE") {
       state.connected = !!msg.connected;
       if (msg.feed) {
         state.feed = msg.feed;
@@ -587,7 +587,7 @@
       }
       state.error = "";
       render();
-    } else if (msg.type === "OPERIX_ERROR") {
+    } else if (msg.type === "OPRIX_ERROR") {
       state.error = msg.error || "Something went wrong";
       render();
     }
@@ -604,7 +604,7 @@
 
   // Keep the dragged chip on-screen if the window is resized.
   window.addEventListener("resize", () => {
-    if (state.prefs.enabled && !onOperixSite() && state.prefs.collapsed) applyPillAnchor();
+    if (state.prefs.enabled && !onOprixSite() && state.prefs.collapsed) applyPillAnchor();
   });
 
   // ---- live auto-sync -----------------------------------------------------
@@ -617,16 +617,16 @@
     if (pollTimer) clearInterval(pollTimer);
     const secs = Math.max(10, Number(state.prefs.pollSeconds) || 30);
     pollTimer = setInterval(() => {
-      if (state.connected && !document.hidden && !onOperixSite()) send({ type: "OPERIX_REFRESH" });
+      if (state.connected && !document.hidden && !onOprixSite()) send({ type: "OPRIX_REFRESH" });
     }, secs * 1000);
   }
   let lastFocusRefresh = 0;
   function focusRefresh() {
-    if (!state.connected || document.hidden || onOperixSite()) return;
+    if (!state.connected || document.hidden || onOprixSite()) return;
     const now = Date.now();
     if (now - lastFocusRefresh < 4000) return; // debounce bursts of focus events
     lastFocusRefresh = now;
-    send({ type: "OPERIX_REFRESH" });
+    send({ type: "OPRIX_REFRESH" });
   }
   document.addEventListener("visibilitychange", focusRefresh);
   window.addEventListener("focus", focusRefresh);
@@ -635,7 +635,7 @@
   async function init() {
     await loadPrefs();
     applyShell();
-    const s = await send({ type: "OPERIX_GET_STATE" });
+    const s = await send({ type: "OPRIX_GET_STATE" });
     if (s && s.ok) {
       state.connected = !!s.connected;
       state.user = s.user || null;
@@ -646,7 +646,7 @@
     }
     render();
     restartPolling();
-    if (state.connected) send({ type: "OPERIX_REFRESH" }); // freshen in the background
+    if (state.connected) send({ type: "OPRIX_REFRESH" }); // freshen in the background
   }
   init();
 

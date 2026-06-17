@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { ClientAdd } from "@/components/clients/client-add";
 import { ClientEdit } from "@/components/clients/client-edit";
 
-export const metadata: Metadata = { title: "Clients · Operix" };
+export const metadata: Metadata = { title: "Clients · Oprix" };
 
 export default async function ClientsPage({
   searchParams,

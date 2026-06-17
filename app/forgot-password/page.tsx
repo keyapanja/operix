@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
-export const metadata: Metadata = { title: "Forgot password · Operix" };
+export const metadata: Metadata = { title: "Forgot password · Oprix" };
 
 export default function ForgotPasswordPage() {
   return (
@@ -11,7 +11,7 @@ export default function ForgotPasswordPage() {
           <span className="gradient-brand flex size-9 items-center justify-center rounded-xl text-sm font-bold text-white">
             Op
           </span>
-          <span className="font-display text-xl font-bold tracking-tight text-content">Operix</span>
+          <span className="font-display text-xl font-bold tracking-tight text-content">Oprix</span>
         </div>
         <ForgotPasswordForm />
       </div>

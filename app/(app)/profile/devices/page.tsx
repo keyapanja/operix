@@ -4,7 +4,7 @@ import { listExtensionTokens } from "@/lib/ext/auth";
 import { PageHeader } from "@/components/ui/page-header";
 import { DevicesList } from "@/components/ext/devices-list";
 
-export const metadata: Metadata = { title: "Connected devices · Operix" };
+export const metadata: Metadata = { title: "Connected devices · Oprix" };
 
 export default async function DevicesPage() {
   const session = await requirePage("self:service");
@@ -21,7 +21,7 @@ export default async function DevicesPage() {
     <>
       <PageHeader
         title="Connected devices"
-        description="Browser extensions connected to your Operix account."
+        description="Browser extensions connected to your Oprix account."
       />
       <DevicesList devices={devices} />
     </>

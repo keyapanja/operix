@@ -1,6 +1,6 @@
-// Operix Companion — popup: the primary on/off switch + quick dock controls.
+// Oprix Companion — popup: the primary on/off switch + quick dock controls.
 
-const PREFS_KEY = "operix_prefs";
+const PREFS_KEY = "oprix_prefs";
 const DEFAULT_PREFS = {
   enabled: true,
   dock: "right",
@@ -44,7 +44,7 @@ function buildSwitch(checked, onChange) {
 async function render() {
   const app = $("app");
   app.textContent = "";
-  const [state, prefs] = await Promise.all([send({ type: "OPERIX_GET_STATE" }), getPrefs()]);
+  const [state, prefs] = await Promise.all([send({ type: "OPRIX_GET_STATE" }), getPrefs()]);
   const connected = !!(state && state.connected);
   $("dot").className = "dot" + (connected ? " on" : "");
 
@@ -81,21 +81,21 @@ async function render() {
     const dc = el("button", { className: "danger", textContent: "Disconnect" });
     dc.onclick = async () => {
       dc.disabled = true;
-      const r = await send({ type: "OPERIX_DISCONNECT" });
+      const r = await send({ type: "OPRIX_DISCONNECT" });
       if (!r || !r.ok) err.textContent = (r && r.error) || "Failed to disconnect";
       render();
     };
     app.append(dc);
   } else {
-    const c = el("button", { className: "primary", textContent: "Connect to Operix" });
+    const c = el("button", { className: "primary", textContent: "Connect to Oprix" });
     c.onclick = async () => {
       c.disabled = true;
-      c.textContent = "Opening Operix…";
-      const r = await send({ type: "OPERIX_CONNECT" });
+      c.textContent = "Opening Oprix…";
+      const r = await send({ type: "OPRIX_CONNECT" });
       if (!r || !r.ok) {
         err.textContent = (r && r.error) || "Connect failed";
         c.disabled = false;
-        c.textContent = "Connect to Operix";
+        c.textContent = "Connect to Oprix";
       } else {
         render();
       }
@@ -128,7 +128,7 @@ async function render() {
     refresh.onclick = async () => {
       refresh.disabled = true;
       refresh.textContent = "Refreshing…";
-      const r = await send({ type: "OPERIX_REFRESH" });
+      const r = await send({ type: "OPRIX_REFRESH" });
       if (!r || !r.ok) err.textContent = (r && r.error) || "Refresh failed";
       refresh.disabled = false;
       refresh.textContent = "Refresh now";
