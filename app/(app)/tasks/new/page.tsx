@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "New task · Oprix" };
 export default async function NewTaskPage() {
   const session = await requirePage("task:manage");
 
-  const [projects, departments, employees] = await Promise.all([
+  const [projects, employees] = await Promise.all([
     prisma.project.findMany({
       where: { companyId: session.companyId, deletedAt: null },
       orderBy: { createdAt: "desc" },
@@ -40,15 +40,10 @@ export default async function NewTaskPage() {
         },
       },
     }),
-    prisma.department.findMany({
-      where: { companyId: session.companyId },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
     prisma.employee.findMany({
       where: { companyId: session.companyId, deletedAt: null },
       orderBy: { fullName: "asc" },
-      select: { id: true, fullName: true, departmentId: true },
+      select: { id: true, fullName: true },
     }),
   ]);
 
@@ -67,13 +62,11 @@ export default async function NewTaskPage() {
               id: sub.id,
               name: sub.name,
               categoryName: ps.service.name,
-              departmentId: sub.departmentId,
               checklist: sub.checklistTemplate.map((c) => c.text),
             })),
           ),
         }))}
-        departments={departments}
-        employees={employees.map((e) => ({ id: e.id, name: e.fullName, departmentId: e.departmentId }))}
+        employees={employees.map((e) => ({ id: e.id, name: e.fullName }))}
       />
     </div>
   );

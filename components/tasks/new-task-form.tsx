@@ -13,13 +13,11 @@ import { Icon } from "@/components/ui/icons";
 import { humanizeEnum } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
-type Dept = { id: string; name: string };
-type Emp = { id: string; name: string; departmentId: string | null };
+type Emp = { id: string; name: string };
 type SubCat = {
   id: string;
   name: string;
   categoryName: string;
-  departmentId: string | null;
   checklist: string[];
 };
 type Proj = { id: string; name: string; subcategories: SubCat[] };
@@ -27,7 +25,6 @@ type CheckItem = { text: string; isDone: boolean };
 
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 const STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"];
-const NO_DEPT = "__none__"; // sub-categories whose category has no department
 
 function fmtBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -37,16 +34,13 @@ function fmtBytes(n: number): string {
 
 export function NewTaskForm({
   projects,
-  departments,
   employees,
 }: {
   projects: Proj[];
-  departments: Dept[];
   employees: Emp[];
 }) {
   const router = useRouter();
   const [projectId, setProjectId] = useState("");
-  const [departmentId, setDepartmentId] = useState("");
   const [serviceId, setServiceId] = useState(""); // a sub-category = "task type"
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -61,51 +55,25 @@ export function NewTaskForm({
   const [pending, start] = useTransition();
 
   const empById = useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees]);
-  const deptName = useMemo(() => new Map(departments.map((d) => [d.id, d.name])), [departments]);
   const project = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
 
-  // Departments this project actually has task types in.
-  const deptOptions = useMemo(() => {
-    if (!project) return [] as { value: string; label: string }[];
-    const keys = new Set(project.subcategories.map((s) => s.departmentId ?? NO_DEPT));
-    const opts = departments.filter((d) => keys.has(d.id)).map((d) => ({ value: d.id, label: d.name }));
-    if (keys.has(NO_DEPT)) opts.push({ value: NO_DEPT, label: "No department" });
-    return opts;
-  }, [project, departments]);
-
-  // Task types (sub-categories) within the chosen department.
+  // All of the project's sub-categories (task types) — no department gating.
   const taskTypeOptions = useMemo(() => {
-    if (!project || !departmentId) return [] as { value: string; label: string }[];
-    return project.subcategories
-      .filter((s) => (s.departmentId ?? NO_DEPT) === departmentId)
-      .map((s) => ({ value: s.id, label: s.name }));
-  }, [project, departmentId]);
+    if (!project) return [] as { value: string; label: string }[];
+    return project.subcategories.map((s) => ({ value: s.id, label: `${s.categoryName} › ${s.name}` }));
+  }, [project]);
 
-  // Assignees are scoped to the chosen department.
-  const deptEmployees = useMemo(() => {
-    if (!departmentId || departmentId === NO_DEPT) return employees;
-    return employees.filter((e) => e.departmentId === departmentId);
-  }, [employees, departmentId]);
+  // Assignees can be anyone in the company (cross-department work is allowed).
   const availableAssignees = useMemo(
-    () => deptEmployees.filter((e) => !assigneeIds.includes(e.id)),
-    [deptEmployees, assigneeIds],
+    () => employees.filter((e) => !assigneeIds.includes(e.id)),
+    [employees, assigneeIds],
   );
 
   function onProjectChange(v: string) {
     setProjectId(v);
-    setDepartmentId("");
     setServiceId("");
     setAssigneeIds([]);
     setChecklist([]);
-  }
-  function onDepartmentChange(v: string) {
-    setDepartmentId(v);
-    setServiceId("");
-    setChecklist([]);
-    // Drop assignees outside the new department.
-    setAssigneeIds((ids) =>
-      v && v !== NO_DEPT ? ids.filter((id) => empById.get(id)?.departmentId === v) : ids,
-    );
   }
   function onTaskTypeChange(v: string) {
     setServiceId(v);
@@ -196,27 +164,15 @@ export function NewTaskForm({
             />
           </Field>
           <Field
-            label="Department"
-            hint={!projectId ? "Pick a project first" : deptOptions.length ? undefined : "This project has no departments"}
-          >
-            <Combobox
-              value={departmentId}
-              onChange={onDepartmentChange}
-              disabled={!projectId}
-              placeholder={projectId ? "Select department" : "—"}
-              options={deptOptions}
-            />
-          </Field>
-          <Field
             label="Task type"
-            hint={!departmentId ? "Pick a department first" : taskTypeOptions.length ? undefined : "No task types in this department"}
+            hint={!projectId ? "Pick a project first" : taskTypeOptions.length ? undefined : "This project has no task types yet"}
           >
             <Combobox
               value={serviceId}
               onChange={onTaskTypeChange}
-              disabled={!departmentId}
+              disabled={!projectId}
               emptyLabel="— None —"
-              placeholder={departmentId ? "— None —" : "—"}
+              placeholder={projectId ? "— None —" : "—"}
               options={taskTypeOptions}
             />
           </Field>
@@ -241,14 +197,10 @@ export function NewTaskForm({
             <DatePicker value={dueDate} onChange={setDueDate} />
           </Field>
 
-          {/* Assignees — scoped to the sub-category's department */}
+          {/* Assignees — anyone in the company (cross-department allowed) */}
           <Field
             label="Assignees"
-            hint={
-              departmentId && departmentId !== NO_DEPT
-                ? `Showing people in ${deptName.get(departmentId) ?? "this department"}`
-                : "Add the people who'll work on this task"
-            }
+            hint="Add the people who'll work on this task — anyone, any department"
             className="sm:col-span-2"
           >
             <div className="flex flex-wrap items-center gap-2">
@@ -268,7 +220,7 @@ export function NewTaskForm({
                   </span>
                 );
               })}
-              {availableAssignees.length > 0 ? (
+              {availableAssignees.length > 0 && (
                 <div className="w-52">
                   <Combobox
                     value=""
@@ -277,9 +229,6 @@ export function NewTaskForm({
                     options={availableAssignees.map((e) => ({ value: e.id, label: e.name }))}
                   />
                 </div>
-              ) : (
-                departmentId && departmentId !== NO_DEPT &&
-                deptEmployees.length === 0 && <span className="text-xs text-faint">No employees in this department yet.</span>
               )}
             </div>
           </Field>
