@@ -147,6 +147,38 @@ export async function createService(
   return { ok: true };
 }
 
+/**
+ * Bulk-create sub-categories under one category — pick the category once, add
+ * many names. Each inherits the category's department; duplicates (service names
+ * are unique per company) are skipped and counted.
+ */
+export async function addSubcategories(
+  parentId: string,
+  namesRaw: string[],
+): Promise<ActionState & { created?: number; skipped?: number }> {
+  const session = await requireCapability("org:manage");
+  const parent = await prisma.service.findFirst({
+    where: { id: parentId, companyId: session.companyId, parentId: null },
+    select: { id: true, departmentId: true },
+  });
+  if (!parent) return { error: "Invalid category" };
+
+  const names = [...new Set(namesRaw.map((n) => n.trim()).filter((n) => n.length > 0 && n.length <= 80))].slice(0, 100);
+  if (names.length === 0) return { error: "Enter at least one sub-category name" };
+
+  const result = await prisma.service.createMany({
+    data: names.map((name) => ({
+      companyId: session.companyId,
+      name,
+      departmentId: parent.departmentId,
+      parentId: parent.id,
+    })),
+    skipDuplicates: true,
+  });
+  revalidatePath(ORG);
+  return { ok: true, created: result.count, skipped: names.length - result.count };
+}
+
 // ---- Work shifts ----------------------------------------------------------
 const ShiftSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(80),

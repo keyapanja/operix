@@ -15,6 +15,7 @@ import { PermissionsMatrix } from "@/components/org/permissions-matrix";
 import { TaskScopeMatrix } from "@/components/org/task-scope-matrix";
 import { CompanyInfoForm, type CompanyInfo } from "@/components/org/company-info-form";
 import { DepartmentHead } from "@/components/org/department-head";
+import { BulkSubcategoryForm } from "@/components/org/bulk-subcategory-form";
 import {
   createDepartment,
   createService,
@@ -215,18 +216,11 @@ export function OrgTabs({
               </AddForm>
             </Card>
             <Card className="p-5">
-              <h3 className="mb-3 text-sm font-semibold text-content">Add sub-category</h3>
+              <h3 className="mb-3 text-sm font-semibold text-content">Add sub-categories</h3>
               {categoryOptions.length === 0 ? (
                 <p className="text-sm text-muted">Add a category first, then create sub-categories under it.</p>
               ) : (
-                <AddForm action={createService}>
-                  <Field label="Sub-category name" htmlFor="sub-name" className="min-w-56">
-                    <Input id="sub-name" name="name" placeholder="e.g. Landing Page" required />
-                  </Field>
-                  <Field label="Category" className="min-w-52">
-                    <Combobox name="parentId" options={categoryOptions} placeholder="Select category" />
-                  </Field>
-                </AddForm>
+                <BulkSubcategoryForm categories={categoryOptions} />
               )}
             </Card>
           </div>
