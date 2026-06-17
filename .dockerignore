@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+uploads
+*.log
+npm-debug.log*
+extension
+docs
+.vscode
+.idea
+Dockerfile
+.dockerignore
