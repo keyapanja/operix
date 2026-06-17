@@ -9,7 +9,7 @@ FROM node:22-slim AS base
 WORKDIR /app
 # OpenSSL is required by Prisma's query engine on Debian.
 RUN apt-get update -y \
-  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && apt-get install -y --no-install-recommends openssl ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 
 # ---- build ----
