@@ -10,8 +10,9 @@ This is a **plain MV3 extension — no build step**. Just load the folder.
 ---
 
 ## Prerequisites
-- The Oprix dev server running at **http://localhost:3000** (`npm run dev`).
-- A staff Oprix account you can log in with (e.g. `admin@oprix.test`).
+- Access to your Oprix instance — the extension defaults to **https://oprix.gowithepic.com**
+  (set a local URL in the options page for dev — see "Production vs local dev" below).
+- A staff Oprix account you can log in with.
 - Chrome or Edge (Chromium). Firefox works with minor differences.
 
 ## Load it (≈30 seconds)
@@ -22,7 +23,7 @@ This is a **plain MV3 extension — no build step**. Just load the folder.
 
 ## Connect
 1. Click the **Oprix Companion** toolbar icon → **Connect to Oprix**.
-2. A tab opens at `localhost:3000/connect-extension`. Log in if needed, then click
+2. A tab opens at `oprix.gowithepic.com/connect-extension`. Log in if needed, then click
    **Authorize**. The tab closes itself and the extension is connected.
    - No password is ever typed into the extension — it reuses your normal Oprix
      login and receives a scoped, revocable token.
@@ -58,22 +59,29 @@ From the toolbar **popup** or **Advanced settings** (options page):
 - **“No running tasks.”** Start a timer on a task in Oprix first — the dock only
   shows tasks you have an active timer on.
 - **“Session expired — reconnect.”** Click the toolbar icon → Connect again.
-- **Nothing loads / connect fails.** Make sure `npm run dev` is running on
-  `localhost:3000` and you’re logged in there.
+- **“Unknown request” / nothing loads.** The background worker is running a stale
+  copy. Open `chrome://extensions`, click **⟳ reload** on Oprix Companion, then
+  reload the web page.
+- **Connect fails on production.** The server must allow this extension's id —
+  set `EXTENSION_ORIGINS=chrome-extension://<your-id>` and redeploy (see below).
 - **Dock not visible.** Check the popup’s “Show dock on pages” is On; some pages
   with very high z-index overlays may sit above it.
 
 ---
 
-## Going to production later
-This build is wired for **localhost**. When Oprix is deployed:
-1. In `manifest.json`, change `host_permissions` to your live origin
-   (e.g. `https://app.oprix.com/*`). Keep/replace localhost as needed.
-2. In the extension **options → Oprix address**, set your live URL (or change the
-   default in code).
-3. On the server, set `EXTENSION_ORIGINS=chrome-extension://<your-extension-id>`
-   so CORS is locked to your published extension.
-4. (Recommended) Pin the extension id by adding a `"key"` to `manifest.json` so
-   dev and Web Store builds share one id.
+## Production (default) vs local dev
+This build is **wired for production** — it talks to **https://oprix.gowithepic.com**
+out of the box (`host_permissions` + default API origin), and the dock auto-hides on
+that site. The one remaining step is server-side CORS:
+
+1. **Load unpacked** (above), then copy the extension's id from `chrome://extensions`.
+   The id stays the same as long as you load from the same folder path.
+2. On the server (Coolify), set **`EXTENSION_ORIGINS=chrome-extension://<your-id>`**
+   and redeploy. Without it the API rejects the extension — CORS fails closed by design.
+3. Click **Connect** — the connect tab opens on oprix.gowithepic.com.
+
+**For local dev:** open the extension **options → Oprix address** and set
+`http://localhost:3000` (localhost is still in `host_permissions`). Run `npm run dev`
+and connect as usual.
 
 No code rearchitecture is needed — the API origin is just configuration.

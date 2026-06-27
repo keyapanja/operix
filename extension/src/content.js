@@ -127,7 +127,7 @@
   }
 
   function oprixOrigin() {
-    return (state.prefs.apiOrigin || "http://localhost:3000").replace(/\/+$/, "");
+    return (state.prefs.apiOrigin || "https://oprix.gowithepic.com").replace(/\/+$/, "");
   }
   // The dock is redundant on the Oprix app itself — hide it there.
   function onOprixSite() {

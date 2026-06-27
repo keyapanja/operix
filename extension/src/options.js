@@ -136,11 +136,11 @@ async function render() {
   // API origin (advanced — for pointing at a deployed Oprix instead of localhost)
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "http://localhost:3000";
+  input.placeholder = "https://oprix.gowithepic.com";
   input.value = prefs.apiOrigin || "";
   input.onchange = () => setPrefs({ apiOrigin: input.value.trim().replace(/\/+$/, "") });
   form.append(
-    row("Oprix address", "Leave blank for local development (localhost:3000).", input),
+    row("Oprix address", "Leave blank for production (oprix.gowithepic.com). Set http://localhost:3000 for local dev.", input),
   );
 }
 

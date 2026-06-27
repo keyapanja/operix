@@ -3,7 +3,7 @@
 // performs mutations on demand, and broadcasts updates to every tab's dock.
 // MV3 service workers are ephemeral, so all state lives in chrome.storage.
 
-const DEFAULT_API_ORIGIN = "http://localhost:3000";
+const DEFAULT_API_ORIGIN = "https://oprix.gowithepic.com";
 const POLL_ALARM = "oprix-poll";
 
 // Secrets + cache (device-local). Prefs roam via chrome.storage.sync.

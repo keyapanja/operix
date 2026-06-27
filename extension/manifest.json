@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Oprix Companion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keep your running Oprix tasks, checklists, and related guides docked to the edge of your screen while you work.",
   "permissions": ["storage", "alarms", "identity"],
-  "host_permissions": ["http://localhost:3000/*"],
+  "host_permissions": ["https://oprix.gowithepic.com/*", "http://localhost:3000/*"],
   "background": { "service_worker": "src/background.js", "type": "module" },
   "action": {
     "default_popup": "src/popup.html",
