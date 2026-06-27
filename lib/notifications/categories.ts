@@ -1,6 +1,8 @@
 // Isomorphic notification taxonomy: maps a notification `type` to a colored
 // category with an icon and a deep-link. Safe to import from server or client.
 
+import { APP_TIME_ZONE } from "@/lib/dates";
+
 export type NoteCategory =
   | "Tasks"
   | "Mentions"
@@ -80,6 +82,7 @@ export function formatNoteTime(d: Date): string {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: APP_TIME_ZONE,
   });
 }
 

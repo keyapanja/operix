@@ -17,6 +17,7 @@ import { TypeEdit } from "@/components/leave/type-edit";
 import { LeaveAllowanceFields } from "@/components/leave/leave-allowance-fields";
 import { createLeaveType, deleteLeaveType } from "@/lib/leave/actions";
 import { formatDate } from "@/lib/format";
+import { BackdateBadge } from "@/components/ui/backdate-badge";
 import { cn } from "@/lib/cn";
 
 type Req = {
@@ -119,8 +120,11 @@ export function LeaveTabs({
                           )}
                         </td>
                         <td className="px-5 py-3 text-muted">
-                          {formatDate(r.startDate)}
-                          {r.startDate !== r.endDate && ` – ${formatDate(r.endDate)}`}
+                          <span className="inline-flex items-center">
+                            {formatDate(r.startDate)}
+                            {r.startDate !== r.endDate && ` – ${formatDate(r.endDate)}`}
+                            <BackdateBadge date={r.startDate} />
+                          </span>
                         </td>
                         <td className="px-5 py-3 text-muted">
                           {r.days}{r.isHalfDay && " (half)"}

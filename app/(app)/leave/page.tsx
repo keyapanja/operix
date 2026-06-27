@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
+import { BackdateBadge } from "@/components/ui/backdate-badge";
 import { ApplyForm } from "@/components/leave/apply-form";
 import { LeaveTabs } from "@/components/leave/leave-tabs";
 
@@ -118,8 +119,11 @@ export default async function LeavePage() {
                           )}
                         </td>
                         <td className="px-5 py-3 text-muted">
-                          {formatDate(iso(r.startDate))}
-                          {iso(r.startDate) !== iso(r.endDate) && ` – ${formatDate(iso(r.endDate))}`}
+                          <span className="inline-flex items-center">
+                            {formatDate(iso(r.startDate))}
+                            {iso(r.startDate) !== iso(r.endDate) && ` – ${formatDate(iso(r.endDate))}`}
+                            <BackdateBadge date={iso(r.startDate)} />
+                          </span>
                         </td>
                         <td className="px-5 py-3 text-muted">{r.days}{r.isHalfDay && " (half)"}</td>
                         <td className="px-5 py-3"><Badge tone={s.tone}>{s.label}</Badge></td>

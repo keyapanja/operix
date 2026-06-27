@@ -8,7 +8,8 @@ import { prisma } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icons";
-import { humanizeEnum, formatDate } from "@/lib/format";
+import { humanizeEnum, formatDate, formatDateTime } from "@/lib/format";
+import { BackdateBadge } from "@/components/ui/backdate-badge";
 import { PRIORITY_TONE, TASK_STATUS_TONE, TASK_STATUS_LABEL } from "@/lib/status";
 import { TaskAssignees } from "@/components/tasks/task-assignees";
 import { TaskChecklist } from "@/components/tasks/task-checklist";
@@ -23,15 +24,6 @@ import { canUseTimer } from "@/lib/timer/finalize";
 import { fmtHm } from "@/lib/timer/shared";
 
 export const metadata: Metadata = { title: "Task · Oprix" };
-
-function fmtDateTime(d: Date): string {
-  return new Date(d).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default async function TaskDetailPage({
   params,
@@ -174,7 +166,10 @@ export default async function TaskDetailPage({
                 </span>
               )}
               {task.dueDate && (
-                <span className="text-xs text-faint">Due {formatDate(task.dueDate)}</span>
+                <span className="inline-flex items-center text-xs text-faint">
+                  Due {formatDate(task.dueDate)}
+                  <BackdateBadge date={task.dueDate.toISOString()} />
+                </span>
               )}
             </div>
           </div>
@@ -269,7 +264,7 @@ export default async function TaskDetailPage({
                           ) : (
                             <span className="font-medium text-content">{authorName(c.authorId)}</span>
                           )}{" "}
-                          <span className="text-xs text-faint">{fmtDateTime(c.createdAt)}</span>
+                          <span className="text-xs text-faint">{formatDateTime(c.createdAt)}</span>
                         </p>
                         <p className="mt-0.5 whitespace-pre-wrap text-sm text-muted">{c.body}</p>
                       </div>
@@ -364,11 +359,11 @@ export default async function TaskDetailPage({
             <div className="mt-4 space-y-1.5 border-t border-line pt-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-faint">Started</span>
-                <span className="font-medium text-content">{task.startedAt ? fmtDateTime(task.startedAt) : "—"}</span>
+                <span className="font-medium text-content">{task.startedAt ? formatDateTime(task.startedAt) : "—"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-faint">Completed</span>
-                <span className="font-medium text-content">{task.completedAt ? fmtDateTime(task.completedAt) : "—"}</span>
+                <span className="font-medium text-content">{task.completedAt ? formatDateTime(task.completedAt) : "—"}</span>
               </div>
             </div>
           </Card>
@@ -391,7 +386,7 @@ export default async function TaskDetailPage({
                           <p className="text-content">
                             <span className="font-medium">{actor}</span> {a.action}
                           </p>
-                          <p className="text-xs text-faint">{fmtDateTime(a.createdAt)}</p>
+                          <p className="text-xs text-faint">{formatDateTime(a.createdAt)}</p>
                         </div>
                       </li>
                     );

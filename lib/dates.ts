@@ -1,6 +1,10 @@
 // Calendar-date helpers. We treat attendance/leave dates as plain calendar
 // dates stored at UTC midnight (matches Prisma @db.Date semantics).
 
+/** App-wide display timezone for wall-clock formatting + "today" checks.
+    Override per deployment with the APP_TIMEZONE env var. */
+export const APP_TIME_ZONE = process.env.APP_TIMEZONE || "Asia/Kolkata";
+
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }

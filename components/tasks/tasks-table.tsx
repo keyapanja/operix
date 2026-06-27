@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icons";
 import { Combobox } from "@/components/ui/combobox";
 import { humanizeEnum, formatDate } from "@/lib/format";
+import { BackdateBadge } from "@/components/ui/backdate-badge";
 import { InlineTimer } from "@/components/timer/inline-timer";
 import type { TimerStatusUI } from "@/lib/timer/shared";
 import { cn } from "@/lib/cn";
@@ -286,7 +287,13 @@ export function TasksTable({
               <td className="px-5 py-3 text-muted">{r.serviceName ?? "—"}</td>
               <td className="px-5 py-3"><Badge tone={TASK_STATUS_TONE[r.status]}>{humanizeEnum(r.status)}</Badge></td>
               <td className="px-5 py-3"><Badge tone={PRIORITY_TONE[r.priority]}>{humanizeEnum(r.priority)}</Badge></td>
-              <td className="px-5 py-3 text-muted">{r.dueDate ? formatDate(r.dueDate) : "—"}</td>
+              <td className="px-5 py-3 text-muted">
+                {r.dueDate ? (
+                  <span className="inline-flex items-center">{formatDate(r.dueDate)}<BackdateBadge date={r.dueDate} /></span>
+                ) : (
+                  "—"
+                )}
+              </td>
               <td className="px-5 py-3 text-muted">{r.assigneeNames.length ? r.assigneeNames.join(", ") : "—"}</td>
               {canTrack && (
                 <td className="px-5 py-3">

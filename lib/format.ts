@@ -1,4 +1,5 @@
 import type { Role } from "@prisma/client";
+import { APP_TIME_ZONE } from "@/lib/dates";
 
 /** "SUPER_ADMIN" -> "Super Admin" */
 export function humanizeEnum(value: string): string {
@@ -23,7 +24,10 @@ export function formatDate(d: Date | string | null | undefined): string {
   });
 }
 
-export function formatDateTime(d: Date | string | null | undefined): string {
+export function formatDateTime(
+  d: Date | string | null | undefined,
+  timeZone: string = APP_TIME_ZONE,
+): string {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleString("en-IN", {
@@ -32,6 +36,7 @@ export function formatDateTime(d: Date | string | null | undefined): string {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone,
   });
 }
 
