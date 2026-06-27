@@ -36,6 +36,7 @@ export function MyRequests({
             <th className="px-5 py-3">Type</th>
             <th className="px-5 py-3">Dates</th>
             <th className="px-5 py-3">Days</th>
+            <th className="px-5 py-3">Reason</th>
             <th className="px-5 py-3">Status</th>
           </tr>
         </thead>
@@ -56,6 +57,13 @@ export function MyRequests({
                 <td className="px-5 py-3 text-muted">
                   {r.days}
                   {r.isHalfDay && " (half)"}
+                </td>
+                <td className="px-5 py-3 text-muted">
+                  {r.reason ? (
+                    <p className="line-clamp-2 max-w-xs">{r.reason}</p>
+                  ) : (
+                    <span className="text-faint">—</span>
+                  )}
                 </td>
                 <td className="px-5 py-3">
                   <Badge tone={s.tone}>{s.label}</Badge>
