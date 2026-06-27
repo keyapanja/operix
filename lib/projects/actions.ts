@@ -389,7 +389,11 @@ const TaskMetaSchema = z.object({
 });
 
 export async function updateTaskMeta(taskId: string, formData: FormData): Promise<ProjectState> {
-  const session = await requireCapability("task:manage");
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated" };
+  if (!(await canEditTask(session, taskId))) {
+    return { error: "Only the person who assigned this task or an assignee can edit it." };
+  }
   const parsed = TaskMetaSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   const d = parsed.data;
@@ -424,7 +428,11 @@ export async function updateTaskMeta(taskId: string, formData: FormData): Promis
 }
 
 export async function addTaskAssignee(taskId: string, employeeId: string): Promise<ProjectState> {
-  const session = await requireCapability("task:manage");
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated" };
+  if (!(await canEditTask(session, taskId))) {
+    return { error: "Only the person who assigned this task or an assignee can change assignees." };
+  }
   const [task, emp] = await Promise.all([
     prisma.task.findFirst({ where: { id: taskId, project: { companyId: session.companyId } }, select: { id: true } }),
     prisma.employee.findFirst({ where: { id: employeeId, companyId: session.companyId, deletedAt: null }, select: { fullName: true } }),
@@ -450,7 +458,11 @@ export async function addTaskAssignee(taskId: string, employeeId: string): Promi
 }
 
 export async function removeTaskAssignee(taskId: string, employeeId: string): Promise<ProjectState> {
-  const session = await requireCapability("task:manage");
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated" };
+  if (!(await canEditTask(session, taskId))) {
+    return { error: "Only the person who assigned this task or an assignee can change assignees." };
+  }
   const emp = await prisma.employee.findFirst({
     where: { id: employeeId, companyId: session.companyId },
     select: { fullName: true, user: { select: { id: true } } },

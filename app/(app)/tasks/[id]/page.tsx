@@ -82,6 +82,10 @@ export default async function TaskDetailPage({
   const isReviewer = session.userId === task.createdById;
   if (!isManager && !isAssignee && !isReviewer) notFound();
 
+  // Editing (meta, checklist, attachments, assignees) is limited to the assigner
+  // (creator), the assignees, or a Super Admin (org-wide override).
+  const canEdit = isReviewer || isAssignee || session.role === "SUPER_ADMIN";
+
   // Review-flow roles. Base employees hold task:manage, so submit/review overrides
   // use an elevated capability (project:manage), not isManager.
   const isElevated = await hasPermission(session.companyId, session.role, "project:manage");
@@ -177,7 +181,7 @@ export default async function TaskDetailPage({
           <div className="flex items-center gap-2">
             <Badge tone={TASK_STATUS_TONE[task.status]}>{TASK_STATUS_LABEL[task.status]}</Badge>
             {isManager && <TaskDuplicate taskId={task.id} />}
-            {isManager && (
+            {canEdit && (
               <TaskEdit
                 taskId={task.id}
                 projectId={task.project.id}
@@ -209,7 +213,7 @@ export default async function TaskDetailPage({
               <h3 className="text-sm font-semibold text-content">Checklist</h3>
             </div>
             <div className="p-5">
-              <TaskChecklist taskId={task.id} canEdit={isManager || isAssignee} initial={task.checklist} />
+              <TaskChecklist taskId={task.id} canEdit={canEdit} initial={task.checklist} />
             </div>
           </Card>
 
@@ -232,7 +236,7 @@ export default async function TaskDetailPage({
             <div className="p-5">
               <AttachmentsPanel
                 uploadUrl={`/api/tasks/${task.id}/attachments`}
-                canEdit={isManager || isAssignee}
+                canEdit={canEdit}
                 initial={task.attachments.map((a) => ({
                   id: a.id,
                   fileName: a.fileName,
@@ -335,7 +339,7 @@ export default async function TaskDetailPage({
             <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-faint">Assignees</p>
             <TaskAssignees
               taskId={task.id}
-              canEdit={isManager}
+              canEdit={canEdit}
               initial={task.assignees.map((a) => ({ id: a.employee.id, name: a.employee.fullName }))}
               employees={employees.map((e) => ({ id: e.id, name: e.fullName }))}
             />
