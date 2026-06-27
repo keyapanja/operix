@@ -14,11 +14,13 @@ export function LeaveAllowanceFields({
   defaultUnlimited = false,
   defaultDays = 12,
   defaultPeriod = "YEAR",
+  defaultAttachmentEnabled = false,
   idPrefix = "lt",
 }: {
   defaultUnlimited?: boolean;
   defaultDays?: number;
   defaultPeriod?: "YEAR" | "MONTH";
+  defaultAttachmentEnabled?: boolean;
   idPrefix?: string;
 }) {
   const [unlimited, setUnlimited] = useState(defaultUnlimited);
@@ -61,6 +63,17 @@ export function LeaveAllowanceFields({
           </Field>
         </>
       )}
+      <Field label="Attachment" className="w-full">
+        <label className="flex items-center gap-2 text-sm text-content">
+          <input
+            type="checkbox"
+            name="attachmentEnabled"
+            defaultChecked={defaultAttachmentEnabled}
+            className="size-4 rounded border-line-strong text-brand-600 focus:ring-brand-500"
+          />
+          Let applicants attach a file (e.g. medical certificate for sick leave)
+        </label>
+      </Field>
     </>
   );
 }

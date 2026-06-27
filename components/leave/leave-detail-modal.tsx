@@ -18,6 +18,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { toast } from "@/components/ui/toast";
 import { confirmDialog } from "@/components/ui/confirm";
+import { Icon } from "@/components/ui/icons";
 import { formatDate, formatDateTime } from "@/lib/format";
 
 export type LeaveDetail = {
@@ -43,6 +44,7 @@ export type LeaveDetail = {
     days: number;
     reason: string | null;
   } | null;
+  attachments: { id: string; fileName: string; mimeType: string | null }[];
 };
 
 const STATUS_TONE: Record<string, { tone: "gray" | "blue" | "green" | "red"; label: string }> = {
@@ -166,6 +168,45 @@ export function LeaveDetailModal({
             </>
           )}
         </dl>
+
+        {req.attachments.length > 0 && (
+          <div className="border-t border-line pt-3">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-faint">Attachments</p>
+            {req.attachments.some((a) => a.mimeType?.startsWith("image/")) && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {req.attachments
+                  .filter((a) => a.mimeType?.startsWith("image/"))
+                  .map((a) => (
+                    <a key={a.id} href={`/api/files/${a.id}`} target="_blank" rel="noopener noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/files/${a.id}`}
+                        alt={a.fileName}
+                        className="h-24 w-24 rounded-lg object-cover ring-1 ring-inset ring-line transition-opacity hover:opacity-90"
+                      />
+                    </a>
+                  ))}
+              </div>
+            )}
+            <ul className="space-y-1">
+              {req.attachments
+                .filter((a) => !a.mimeType?.startsWith("image/"))
+                .map((a) => (
+                  <li key={a.id}>
+                    <a
+                      href={`/api/files/${a.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-accent-strong hover:underline"
+                    >
+                      <Icon name="download" className="size-4 shrink-0" />
+                      {a.fileName}
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
 
         {req.pendingEdit && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-500/25 dark:bg-amber-500/10">

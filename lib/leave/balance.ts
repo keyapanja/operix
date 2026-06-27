@@ -11,6 +11,7 @@ export type LeaveBalance = {
   remaining: number;
   period: AllowancePeriod;
   unlimited: boolean;
+  attachmentEnabled: boolean;
 };
 
 // Current month or current year, as a [start, end) UTC range.
@@ -60,6 +61,7 @@ export async function computeBalances(
       allowanceValue: true,
       allowancePeriod: true,
       unlimited: true,
+      attachmentEnabled: true,
     },
   });
 
@@ -75,6 +77,7 @@ export async function computeBalances(
       remaining: Math.max(0, t.allowanceValue - used),
       period: t.allowancePeriod,
       unlimited: t.unlimited,
+      attachmentEnabled: t.attachmentEnabled,
     });
   }
   return out;

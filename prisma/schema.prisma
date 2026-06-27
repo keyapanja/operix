@@ -661,6 +661,7 @@ model Attachment {
   taskId     String?
   projectId  String?
   announcementId String?
+  leaveRequestId String?
   fileKey    String
   fileName   String
   mimeType   String?
@@ -671,10 +672,12 @@ model Attachment {
   task    Task?    @relation(fields: [taskId], references: [id])
   project Project? @relation(fields: [projectId], references: [id])
   announcement Announcement? @relation(fields: [announcementId], references: [id])
+  leaveRequest LeaveRequest? @relation(fields: [leaveRequestId], references: [id])
 
   @@index([taskId])
   @@index([projectId])
   @@index([announcementId])
+  @@index([leaveRequestId])
 }
 
 // ============================================================
@@ -725,6 +728,7 @@ model LeaveType {
   allowancePeriod AllowancePeriod @default(YEAR)
   unlimited       Boolean         @default(false) // no fixed day count — apply freely (e.g. unpaid)
   annualQuota     Float           @default(0) // deprecated; kept for back-compat
+  attachmentEnabled Boolean       @default(false) // applicants may attach a file (e.g. medical certificate)
 
   company   Company        @relation(fields: [companyId], references: [id])
   requests  LeaveRequest[]
@@ -773,6 +777,7 @@ model LeaveRequest {
 
   employee  Employee   @relation(fields: [employeeId], references: [id])
   leaveType LeaveType? @relation(fields: [leaveTypeId], references: [id])
+  attachments Attachment[]
 
   @@index([companyId])
   @@index([employeeId])

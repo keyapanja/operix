@@ -29,6 +29,7 @@ type LType = {
   allowanceValue: number;
   allowancePeriod: AllowancePeriod;
   unlimited: boolean;
+  attachmentEnabled: boolean;
 };
 type Opt = { id: string; name: string };
 

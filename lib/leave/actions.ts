@@ -72,6 +72,7 @@ export async function createLeaveType(
         allowanceValue: d.allowanceValue,
         allowancePeriod: d.allowancePeriod,
         unlimited,
+        attachmentEnabled: formData.get("attachmentEnabled") === "on",
       },
     });
   } catch {
@@ -108,6 +109,7 @@ export async function updateLeaveType(
         allowanceValue: d.allowanceValue,
         allowancePeriod: d.allowancePeriod,
         unlimited,
+        attachmentEnabled: formData.get("attachmentEnabled") === "on",
       },
     });
     if (res.count === 0) return { error: "Leave type not found" };
@@ -145,7 +147,7 @@ async function hasOverlappingLeave(companyId: string, employeeId: string, start:
 export async function applyLeave(
   _prev: LeaveState,
   formData: FormData,
-): Promise<LeaveState> {
+): Promise<LeaveState & { id?: string }> {
   const session = await getSession();
   if (!session?.employeeId) {
     return { error: "No employee profile is linked to your account." };
@@ -179,7 +181,7 @@ export async function applyLeave(
     leaveTypeId = d.leaveTypeId;
   }
 
-  await prisma.leaveRequest.create({
+  const created = await prisma.leaveRequest.create({
     data: {
       companyId: session.companyId,
       employeeId: session.employeeId,
@@ -192,6 +194,7 @@ export async function applyLeave(
       reason: d.reason || null,
       status: "PENDING",
     },
+    select: { id: true },
   });
 
   // Notify everyone who can approve leave.
@@ -212,7 +215,7 @@ export async function applyLeave(
   }
 
   revalidatePath("/leave");
-  return { ok: true };
+  return { ok: true, id: created.id };
 }
 
 export async function deleteLeaveType(id: string): Promise<LeaveState> {

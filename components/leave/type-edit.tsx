@@ -19,6 +19,7 @@ export type LeaveTypeRow = {
   allowanceValue: number;
   allowancePeriod: "YEAR" | "MONTH";
   unlimited: boolean;
+  attachmentEnabled: boolean;
 };
 
 function TypeForm({ type, onDone, onCancel }: { type: LeaveTypeRow; onDone: () => void; onCancel: () => void }) {
@@ -48,6 +49,7 @@ function TypeForm({ type, onDone, onCancel }: { type: LeaveTypeRow; onDone: () =
           defaultUnlimited={type.unlimited}
           defaultDays={type.allowanceValue}
           defaultPeriod={type.allowancePeriod}
+          defaultAttachmentEnabled={type.attachmentEnabled}
           idPrefix="et"
         />
       </div>

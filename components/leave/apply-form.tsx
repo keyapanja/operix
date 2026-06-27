@@ -1,13 +1,15 @@
 "use client";
 
-import { Fragment, useActionState, useEffect, useMemo, useState } from "react";
-import { applyLeave, type LeaveState } from "@/lib/leave/actions";
+import { Fragment, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { applyLeave } from "@/lib/leave/actions";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Icon } from "@/components/ui/icons";
+import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
 
 type Balance = {
@@ -18,6 +20,8 @@ type Balance = {
   period: "MONTH" | "YEAR";
   unlimited: boolean;
   used: number;
+  /** Optional so the calendar's quick-apply (which omits it) stays compatible. */
+  attachmentEnabled?: boolean;
 };
 
 export function ApplyForm({
@@ -33,27 +37,16 @@ export function ApplyForm({
   bare?: boolean;
   onDone?: () => void;
 }) {
-  const [state, formAction, pending] = useActionState<LeaveState, FormData>(applyLeave, {});
   const [resetKey, setResetKey] = useState(0);
   const [kind, setKind] = useState<"LEAVE" | "WFH">("LEAVE");
   const [typeId, setTypeId] = useState("");
   const [start, setStart] = useState(initialStart);
   const [end, setEnd] = useState(initialEnd);
   const [half, setHalf] = useState(false);
-
-  useEffect(() => {
-    if (!state.ok) return;
-    if (onDone) {
-      onDone();
-      return;
-    }
-    setResetKey((k) => k + 1);
-    setTypeId("");
-    setStart("");
-    setEnd("");
-    setHalf(false);
-    setKind("LEAVE");
-  }, [state, onDone]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const singleDay = !!start && start === end;
   const selected = useMemo(() => balances.find((b) => b.typeId === typeId), [balances, typeId]);
@@ -78,15 +71,70 @@ export function ApplyForm({
     requestedDays > 0 &&
     requestedDays > selected.remaining;
   const blocked = exhausted || overBalance;
+  const showAttachment = kind === "LEAVE" && !!selected?.attachmentEnabled;
+
+  function onFilesPicked(e: ChangeEvent<HTMLInputElement>) {
+    setFiles((f) => [...f, ...Array.from(e.target.files ?? [])]);
+    e.target.value = "";
+  }
+  function removeFile(i: number) {
+    setFiles((f) => f.filter((_, idx) => idx !== i));
+  }
+
+  function resetForm() {
+    setResetKey((k) => k + 1);
+    setTypeId("");
+    setStart("");
+    setEnd("");
+    setHalf(false);
+    setKind("LEAVE");
+    setFiles([]);
+  }
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setOk(false);
+    // The file input has no `name`, so it isn't serialized into the action's
+    // FormData (keeping the server action small); files upload separately below.
+    const fd = new FormData(e.currentTarget);
+    setBusy(true);
+    try {
+      const res = await applyLeave({}, fd);
+      if (res.error || !res.id) {
+        setError(res.error ?? "Couldn't submit the request.");
+        return;
+      }
+      if (showAttachment && files.length) {
+        const up = new FormData();
+        for (const f of files) up.append("files", f);
+        const r = await fetch(`/api/leave/${res.id}/attachments`, { method: "POST", body: up });
+        if (!r.ok) {
+          const j = await r.json().catch(() => null);
+          toast.error(`Request submitted, but the attachment failed to upload: ${j?.error ?? r.statusText}`);
+        }
+      }
+      setOk(true);
+      if (onDone) {
+        onDone();
+        return;
+      }
+      resetForm();
+    } catch {
+      setError("Couldn't submit the request.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const form = (
-    <form action={formAction} className="space-y-4">
-      {state.error && (
+    <form onSubmit={onSubmit} className="space-y-4">
+      {error && (
         <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-inset ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/25">
-          {state.error}
+          {error}
         </div>
       )}
-      {state.ok && !onDone && (
+      {ok && !onDone && (
         <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/25">
           Request submitted for approval.
         </div>
@@ -162,6 +210,36 @@ export function ApplyForm({
         <Field label="Reason" htmlFor="apply-reason">
           <Textarea id="apply-reason" name="reason" placeholder="Optional note for your manager…" />
         </Field>
+
+        {showAttachment && (
+          <Field label="Attachment" hint="e.g. a medical certificate (optional)">
+            <div>
+              {files.length > 0 && (
+                <ul className="mb-2 space-y-1">
+                  {files.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2 rounded-lg bg-canvas px-2.5 py-1.5 text-sm">
+                      <Icon name="folder" className="size-4 shrink-0 text-faint" />
+                      <span className="flex-1 truncate text-content">{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(i)}
+                        className="shrink-0 text-faint hover:text-red-600"
+                        aria-label={`Remove ${f.name}`}
+                      >
+                        <Icon name="x" className="size-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-canvas px-3 py-2 text-sm font-medium text-content ring-1 ring-inset ring-line transition-colors hover:bg-surface">
+                <Icon name="plus" className="size-4" />
+                Add file
+                <input type="file" multiple className="hidden" onChange={onFilesPicked} />
+              </label>
+            </div>
+          </Field>
+        )}
       </Fragment>
 
       {blocked && selected && (
@@ -173,8 +251,8 @@ export function ApplyForm({
       )}
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={pending || blocked}>
-          {pending ? "Submitting…" : "Submit request"}
+        <Button type="submit" disabled={busy || blocked}>
+          {busy ? "Submitting…" : "Submit request"}
         </Button>
       </div>
     </form>

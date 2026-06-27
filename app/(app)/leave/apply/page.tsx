@@ -39,6 +39,7 @@ export default async function ApplyLeavePage() {
           period: b.period,
           unlimited: b.unlimited,
           used: b.used,
+          attachmentEnabled: b.attachmentEnabled,
         }))}
       />
     </div>

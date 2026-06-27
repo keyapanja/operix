@@ -22,6 +22,7 @@ const REQUEST_SELECT = {
   startDate: true, endDate: true, reason: true, createdAt: true,
   leaveTypeId: true, pendingEdit: true, hrApprovedById: true, decidedAt: true,
   leaveType: { select: { name: true } },
+  attachments: { orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, mimeType: true } },
 } as const;
 
 export default async function LeavePage() {
@@ -60,7 +61,7 @@ export default async function LeavePage() {
           orderBy: { name: "asc" },
           select: {
             id: true, name: true, description: true, paidType: true,
-            allowanceValue: true, allowancePeriod: true, unlimited: true,
+            allowanceValue: true, allowancePeriod: true, unlimited: true, attachmentEnabled: true,
           },
         })
       : Promise.resolve([]),
@@ -105,6 +106,7 @@ export default async function LeavePage() {
     pendingEdit: asPending(r.pendingEdit),
     decidedByName: approverName(r.hrApprovedById),
     decidedAt: r.decidedAt?.toISOString() ?? null,
+    attachments: r.attachments,
   }));
 
   const allDetails: LeaveDetail[] = allRequests.map((r) => ({
@@ -123,6 +125,7 @@ export default async function LeavePage() {
     pendingEdit: asPending(r.pendingEdit),
     decidedByName: approverName(r.hrApprovedById),
     decidedAt: r.decidedAt?.toISOString() ?? null,
+    attachments: r.attachments,
   }));
 
   return (
