@@ -4,34 +4,38 @@ import { useState, type ChangeEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icons";
 import { toast } from "@/components/ui/toast";
+import { ImageCropper } from "@/components/ui/image-cropper";
 
 /**
  * Image preview + upload/remove against an endpoint that handles POST
  * (multipart field "file") and DELETE. The caller supplies the preview node
  * (an <Avatar> or a square <img>). Refreshes the route on success.
+ *
+ * With `crop`, the picked image opens a square cropper first and the cropped,
+ * re-encoded result (small JPEG) is what gets uploaded.
  */
 export function ImageUpload({
   endpoint,
   hasImage,
   preview,
   hint,
+  crop = false,
 }: {
   endpoint: string;
   hasImage: boolean;
   preview: ReactNode;
   hint?: string;
+  crop?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
-  async function onPick(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  async function uploadBlob(blob: Blob, filename: string) {
     setBusy(true);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", blob, filename);
       const res = await fetch(endpoint, { method: "POST", body: fd });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -45,6 +49,22 @@ export function ImageUpload({
     } finally {
       setBusy(false);
     }
+  }
+
+  function onPick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (crop) {
+      // Guard against loading an enormous original into the browser.
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error("That image is too large to load — please use one under 20 MB.");
+        return;
+      }
+      setCropFile(file);
+      return;
+    }
+    void uploadBlob(file, file.name);
   }
 
   async function onRemove() {
@@ -92,6 +112,17 @@ export function ImageUpload({
         </div>
         {hint && <p className="text-xs text-faint">{hint}</p>}
       </div>
+
+      {cropFile && (
+        <ImageCropper
+          file={cropFile}
+          onCancel={() => setCropFile(null)}
+          onConfirm={(blob) => {
+            setCropFile(null);
+            void uploadBlob(blob, "avatar.jpg");
+          }}
+        />
+      )}
     </div>
   );
 }

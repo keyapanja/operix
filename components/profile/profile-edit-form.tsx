@@ -43,7 +43,8 @@ export function ProfileEditForm({
           endpoint="/api/profile/avatar"
           hasImage={!!initial.avatarUrl}
           preview={<Avatar name={fullName} src={initial.avatarUrl || null} size="lg" />}
-          hint="PNG, JPG or WEBP — up to 5 MB"
+          hint="Pick a photo to crop · saved as a square, under 2 MB"
+          crop
         />
       </Field>
 
