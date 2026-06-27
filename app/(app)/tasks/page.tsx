@@ -37,7 +37,7 @@ export default async function TasksPage({
   const scopeWhere = taskScopeWhere(scope, session, departmentId);
 
   const tasks = await prisma.task.findMany({
-    where: { AND: [{ project: { companyId: session.companyId, deletedAt: null } }, scopeWhere] },
+    where: { deletedAt: null, AND: [{ project: { companyId: session.companyId, deletedAt: null } }, scopeWhere] },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

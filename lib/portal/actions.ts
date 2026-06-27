@@ -28,7 +28,7 @@ async function notifyInternal(
 function loadClientTask(clientId: string, companyId: string, taskId: string) {
   return prisma.task.findFirst({
     // clientId in the WHERE = the ownership check; a foreign task returns null.
-    where: { id: taskId, project: { clientId, companyId, deletedAt: null } },
+    where: { id: taskId, deletedAt: null, project: { clientId, companyId, deletedAt: null } },
     select: {
       id: true,
       name: true,

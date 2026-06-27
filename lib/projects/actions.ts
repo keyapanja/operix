@@ -400,7 +400,7 @@ export async function updateTaskMeta(taskId: string, formData: FormData): Promis
   const d = parsed.data;
 
   const task = await prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: { projectId: true },
   });
   if (!task) return { error: "Task not found" };
@@ -445,7 +445,7 @@ export async function setTaskStatus(taskId: string, status: TaskStatus): Promise
     return { error: "Review and Completed are set through the review workflow." };
   }
   const task = await prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: { id: true, status: true },
   });
   if (!task) return { error: "Task not found" };
@@ -472,7 +472,7 @@ export async function addTaskAssignee(taskId: string, employeeId: string): Promi
     return { error: "Only the person who assigned this task or an assignee can change assignees." };
   }
   const [task, emp] = await Promise.all([
-    prisma.task.findFirst({ where: { id: taskId, project: { companyId: session.companyId } }, select: { id: true } }),
+    prisma.task.findFirst({ where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } }, select: { id: true } }),
     prisma.employee.findFirst({ where: { id: employeeId, companyId: session.companyId, deletedAt: null }, select: { fullName: true } }),
   ]);
   if (!task) return { error: "Task not found" };
@@ -515,48 +515,46 @@ export async function removeTaskAssignee(taskId: string, employeeId: string): Pr
   return { ok: true };
 }
 
-// Remove a task and all of its dependent rows. Caller MUST have already
-// verified the task belongs to the acting company.
-async function purgeTask(taskId: string): Promise<void> {
-  await prisma.task.updateMany({ where: { parentTaskId: taskId }, data: { parentTaskId: null } });
-  await prisma.taskTimer.deleteMany({ where: { taskId } });
-  await prisma.timeEntry.deleteMany({ where: { taskId } });
-  await prisma.checklistItem.deleteMany({ where: { taskId } });
-  const atts = await prisma.attachment.findMany({ where: { taskId }, select: { fileKey: true } });
-  await prisma.attachment.deleteMany({ where: { taskId } });
-  for (const a of atts) await deleteUpload(a.fileKey);
-  await prisma.taskAssignee.deleteMany({ where: { taskId } });
-  await prisma.comment.deleteMany({ where: { taskId } });
-  await prisma.task.delete({ where: { id: taskId } });
+// Move a task to the trash: stop any running timers (so the timer bar clears
+// and tracked time is banked into the timesheet), then soft-delete. Child rows
+// — checklist, comments, attachments, assignees, time entries, subtasks — are
+// kept intact so a Super-Admin restore brings the whole task back. Permanent
+// deletion (with file cleanup) will live in the trash module.
+async function trashTask(companyId: string, taskId: string, userId: string): Promise<void> {
+  await finalizeAllTaskTimers(companyId, taskId);
+  await prisma.task.update({
+    where: { id: taskId },
+    data: { deletedAt: new Date(), deletedById: userId },
+  });
 }
 
 export async function deleteTask(taskId: string): Promise<ProjectState> {
   const session = await requireCapability("task:manage");
   const task = await prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: { id: true },
   });
   if (!task) return { error: "Task not found" };
-  await purgeTask(taskId);
+  await trashTask(session.companyId, taskId, session.userId);
   revalidatePath("/tasks");
   return { ok: true };
 }
 
-/** Bulk-delete tasks. Each is removed independently; failures are counted. */
+/** Bulk-move tasks to trash. Each is handled independently; failures are counted. */
 export async function deleteTasks(
   ids: string[],
 ): Promise<ProjectState & { deleted?: number; skipped?: number }> {
   const session = await requireCapability("task:manage");
   if (ids.length === 0) return { ok: true, deleted: 0, skipped: 0 };
   const tasks = await prisma.task.findMany({
-    where: { id: { in: ids }, project: { companyId: session.companyId } },
+    where: { id: { in: ids }, deletedAt: null, project: { companyId: session.companyId } },
     select: { id: true },
   });
   let deleted = 0;
   let skipped = 0;
   for (const t of tasks) {
     try {
-      await purgeTask(t.id);
+      await trashTask(session.companyId, t.id, session.userId);
       deleted++;
     } catch {
       skipped++;
@@ -572,7 +570,7 @@ export async function duplicateTask(
 ): Promise<ProjectState & { task?: { id: string } }> {
   const session = await requireCapability("task:manage");
   const src = await prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: {
       projectId: true,
       name: true,
@@ -620,7 +618,7 @@ export async function addComment(taskId: string, body: string): Promise<ProjectS
   if (!text) return { error: "Comment can't be empty" };
 
   const task = await prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: { id: true, name: true, assignees: { select: { employeeId: true } } },
   });
   if (!task) return { error: "Task not found" };

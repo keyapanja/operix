@@ -24,6 +24,7 @@ export async function getActiveTasksFor(session: SessionUser): Promise<ExtActive
 
   const rows = await prisma.task.findMany({
     where: {
+      deletedAt: null,
       project: { companyId: session.companyId, deletedAt: null },
       status: { in: [...WORK_STATES] },
       assignees: { some: { employeeId: session.employeeId } },

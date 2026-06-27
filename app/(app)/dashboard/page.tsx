@@ -38,6 +38,7 @@ export default async function DashboardPage() {
     session.employeeId
       ? prisma.task.findMany({
           where: {
+            deletedAt: null,
             project: { companyId: session.companyId, deletedAt: null },
             dueDate: todayUTC,
             status: { not: "COMPLETED" },

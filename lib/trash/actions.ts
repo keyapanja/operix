@@ -22,7 +22,8 @@ async function requireSuperAdmin() {
  */
 export async function restoreItem(type: TrashType, id: string): Promise<TrashState> {
   const session = await requireSuperAdmin();
-  const where = { id, companyId: session.companyId, deletedAt: { not: null } };
+  const companyId = session.companyId;
+  const where = { id, companyId, deletedAt: { not: null } };
   const data = { deletedAt: null, deletedById: null };
 
   switch (type) {
@@ -37,6 +38,14 @@ export async function restoreItem(type: TrashType, id: string): Promise<TrashSta
     case "employee":
       await prisma.employee.updateMany({ where, data });
       revalidatePath("/employees");
+      break;
+    case "task":
+      // Tasks scope to the company through their project, not a direct column.
+      await prisma.task.updateMany({
+        where: { id, deletedAt: { not: null }, project: { companyId } },
+        data,
+      });
+      revalidatePath("/tasks");
       break;
     default:
       return { error: "This item type can't be restored yet." };

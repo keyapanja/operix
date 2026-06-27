@@ -15,7 +15,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { id: taskId } = await ctx.params;
 
   const task = await prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: { id: true },
   });
   if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });

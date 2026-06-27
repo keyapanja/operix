@@ -26,7 +26,7 @@ async function loggedSeconds(userId: string, taskId: string): Promise<number> {
 /** Start or resume the user's timer on a task (gated by the review flow). */
 export async function startTimerFor(session: SessionUser, taskId: string): Promise<TimerState> {
   const task = await prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: {
       id: true,
       status: true,

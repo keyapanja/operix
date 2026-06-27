@@ -26,7 +26,7 @@ export default async function ProjectsPage() {
       type: true,
       dueDate: true,
       client: { select: { name: true } },
-      tasks: { select: { status: true } },
+      tasks: { where: { deletedAt: null }, select: { status: true } },
     },
   });
 

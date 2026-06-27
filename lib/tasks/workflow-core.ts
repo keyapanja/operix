@@ -18,7 +18,7 @@ export async function submitForReviewFor(
   finalLink: string,
 ): Promise<WorkflowState> {
   const task = await prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: {
       id: true,
       name: true,

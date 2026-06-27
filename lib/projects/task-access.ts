@@ -12,7 +12,7 @@ import { logTaskActivity } from "@/lib/activity";
 
 export async function canEditTask(session: SessionUser, taskId: string): Promise<boolean> {
   const task = await prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: { createdById: true, assignees: { select: { employeeId: true } } },
   });
   if (!task) return false;

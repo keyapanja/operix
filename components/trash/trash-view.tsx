@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icons";
 import { toast } from "@/components/ui/toast";
+import { TrashDetailModal } from "@/components/trash/trash-detail-modal";
 import { formatDateTime } from "@/lib/format";
 
 const TONE: Record<TrashType, "gray" | "green" | "amber" | "blue" | "red"> = {
@@ -28,6 +29,7 @@ export function TrashView({ items }: { items: TrashItem[] }) {
   const [type, setType] = useState("");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [detail, setDetail] = useState<TrashItem | null>(null);
 
   // Only offer type filters that actually have trashed items.
   const typeOptions = useMemo(() => {
@@ -57,6 +59,7 @@ export function TrashView({ items }: { items: TrashItem[] }) {
         return;
       }
       toast.success(`${it.typeLabel} restored`);
+      setDetail(null);
       router.refresh();
     } catch {
       toast.error("Couldn't restore this item.");
@@ -105,7 +108,11 @@ export function TrashView({ items }: { items: TrashItem[] }) {
           {filtered.map((it) => {
             const key = it.type + it.id;
             return (
-              <div key={key} className="flex items-center gap-3 px-5 py-3.5">
+              <div
+                key={key}
+                onClick={() => setDetail(it)}
+                className="flex cursor-pointer items-center gap-3 px-5 py-3.5 transition-colors hover:bg-canvas"
+              >
                 <Badge tone={TONE[it.type]} className="shrink-0">
                   {it.typeLabel}
                 </Badge>
@@ -118,7 +125,10 @@ export function TrashView({ items }: { items: TrashItem[] }) {
                   {it.deletedByName && <p className="text-xs text-faint">by {it.deletedByName}</p>}
                 </div>
                 <button
-                  onClick={() => restore(it)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    restore(it);
+                  }}
                   disabled={busy === key}
                   className="shrink-0 rounded-lg bg-canvas px-3 py-1.5 text-sm font-medium text-accent-strong ring-1 ring-inset ring-line transition-colors hover:bg-surface disabled:opacity-50"
                 >
@@ -128,6 +138,15 @@ export function TrashView({ items }: { items: TrashItem[] }) {
             );
           })}
         </Card>
+      )}
+
+      {detail && (
+        <TrashDetailModal
+          item={detail}
+          onClose={() => setDetail(null)}
+          onRestore={() => restore(detail)}
+          restoring={busy === detail.type + detail.id}
+        />
       )}
     </div>
   );

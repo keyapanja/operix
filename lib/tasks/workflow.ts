@@ -14,7 +14,7 @@ type Sess = NonNullable<Awaited<ReturnType<typeof getSession>>>;
 
 async function loadTask(session: Sess, taskId: string) {
   return prisma.task.findFirst({
-    where: { id: taskId, project: { companyId: session.companyId } },
+    where: { id: taskId, deletedAt: null, project: { companyId: session.companyId } },
     select: {
       id: true,
       name: true,

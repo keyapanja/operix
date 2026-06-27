@@ -48,11 +48,11 @@ export default async function ProjectsReportPage() {
         name: true,
         status: true,
         client: { select: { name: true } },
-        tasks: { select: { status: true, dueDate: true } },
+        tasks: { where: { deletedAt: null }, select: { status: true, dueDate: true } },
         timeEntries: { select: { hours: true } },
       },
     }),
-    prisma.task.groupBy({ by: ["serviceId"], where: { project: { companyId } }, _count: { _all: true } }),
+    prisma.task.groupBy({ by: ["serviceId"], where: { deletedAt: null, project: { companyId } }, _count: { _all: true } }),
     prisma.service.findMany({ where: { companyId }, select: { id: true, name: true } }),
   ]);
   const serviceName = new Map(services.map((s) => [s.id, s.name]));

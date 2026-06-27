@@ -28,7 +28,7 @@ export async function listClientProjects(clientId: string, companyId: string) {
       startDate: true,
       type: true,
       dueDate: true,
-      tasks: { select: { status: true } },
+      tasks: { where: { deletedAt: null }, select: { status: true } },
     },
   });
   return projects.map(({ tasks, ...p }) => ({ ...p, progress: progressOf(tasks) }));
@@ -48,6 +48,7 @@ export async function getClientProject(clientId: string, companyId: string, proj
       type: true,
       dueDate: true,
       tasks: {
+        where: { deletedAt: null },
         orderBy: { createdAt: "asc" },
         // No assignees / timers / cost — progress only.
         select: { id: true, name: true, status: true, finalLink: true, service: { select: { name: true } } },
@@ -89,7 +90,7 @@ export async function listClientDeliverables(clientId: string, companyId: string
 
 export async function listPendingTaskReviews(clientId: string, companyId: string) {
   return prisma.task.findMany({
-    where: { status: "CLIENT_REVIEW", project: { clientId, companyId, deletedAt: null } },
+    where: { status: "CLIENT_REVIEW", deletedAt: null, project: { clientId, companyId, deletedAt: null } },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
@@ -105,7 +106,7 @@ export async function getPortalSummary(clientId: string, companyId: string) {
   const [projectCount, tasksAwaiting, deliverablesAwaiting] = await Promise.all([
     prisma.project.count({ where: { clientId, companyId, deletedAt: null } }),
     prisma.task.count({
-      where: { status: "CLIENT_REVIEW", project: { clientId, companyId, deletedAt: null } },
+      where: { status: "CLIENT_REVIEW", deletedAt: null, project: { clientId, companyId, deletedAt: null } },
     }),
     prisma.deliverable.count({
       where: { status: "SUBMITTED", project: { clientId, companyId, deletedAt: null } },

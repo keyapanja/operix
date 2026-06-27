@@ -46,6 +46,7 @@ export default async function ProjectDetailPage({
           },
         },
         tasks: {
+          where: { deletedAt: null },
           orderBy: { createdAt: "asc" },
           select: {
             id: true,

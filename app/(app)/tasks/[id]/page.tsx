@@ -36,7 +36,7 @@ export default async function TaskDetailPage({
   const session = await requirePage();
 
   const task = await prisma.task.findFirst({
-    where: { id, project: { companyId: session.companyId } },
+    where: { id, deletedAt: null, project: { companyId: session.companyId } },
     select: {
       id: true,
       name: true,

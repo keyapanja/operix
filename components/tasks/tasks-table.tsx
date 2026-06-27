@@ -146,7 +146,7 @@ export function TasksTable({
   async function bulkDelete() {
     const ids = [...selected];
     if (!ids.length) return;
-    if (!(await confirmDialog({ message: `Delete ${ids.length} task${ids.length === 1 ? "" : "s"}? This can't be undone.`, tone: "danger", confirmLabel: "Delete" }))) return;
+    if (!(await confirmDialog({ message: `Move ${ids.length} task${ids.length === 1 ? "" : "s"} to trash? A Super Admin can restore them.`, tone: "danger", confirmLabel: "Delete" }))) return;
     startBulk(async () => {
       const res = await deleteTasks(ids);
       if (res.error) {
@@ -166,7 +166,7 @@ export function TasksTable({
   }
   async function onDelete(e: MouseEvent, id: string) {
     e.stopPropagation();
-    if (!(await confirmDialog({ message: "Delete this task? This can't be undone.", tone: "danger" }))) return;
+    if (!(await confirmDialog({ message: "Move this task to trash? A Super Admin can restore it.", tone: "danger" }))) return;
     setDeletingId(id);
     startDelete(async () => {
       const res = await deleteTask(id);

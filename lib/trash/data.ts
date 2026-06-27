@@ -1,10 +1,11 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { formatDate } from "@/lib/format";
 
 /**
- * Entity kinds that route through the platform trash. The first three already
- * soft-delete (deletedAt); the rest are wired entity-by-entity. Keep this union
- * in sync with the queries in getTrash() and the switch in restoreItem().
+ * Entity kinds that route through the platform trash. Keep this union in sync
+ * with the queries in getTrash() and the switch in restoreItem(). Add a query
+ * block here + a restore case to bring a new type into the trash.
  */
 export type TrashType =
   | "project"
@@ -16,38 +17,66 @@ export type TrashType =
   | "kb"
   | "holiday";
 
+export type TrashDetail = { label: string; value: string };
+
 export type TrashItem = {
   type: TrashType;
   typeLabel: string;
   id: string;
   label: string;
   sublabel: string | null;
+  /** Read-only field/value pairs shown in the detail popup. */
+  details: TrashDetail[];
   deletedAt: string; // ISO
   deletedById: string | null;
   deletedByName: string | null;
 };
 
+/** "IN_PROGRESS" → "In progress", "ONE_TIME" → "One time". */
+function titleCase(s: string): string {
+  return s.toLowerCase().replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
+
+function detail(label: string, value: string | null | undefined): TrashDetail | null {
+  return value ? { label, value } : null;
+}
+
 /**
  * Every soft-deleted record in the company, newest first. Super-Admin only
- * (the page + actions enforce the role). Each entity is one query block — add a
- * block here and a case in restoreItem() to bring a new type into the trash.
+ * (the page + actions enforce the role).
  */
 export async function getTrash(companyId: string): Promise<TrashItem[]> {
-  const [projects, clients, employees] = await Promise.all([
+  const [projects, clients, employees, tasks] = await Promise.all([
     prisma.project.findMany({
       where: { companyId, deletedAt: { not: null } },
       orderBy: { deletedAt: "desc" },
-      select: { id: true, name: true, deletedAt: true, deletedById: true, client: { select: { name: true } } },
+      select: {
+        id: true, name: true, description: true, status: true, priority: true, type: true, dueDate: true,
+        deletedAt: true, deletedById: true, client: { select: { name: true } },
+      },
     }),
     prisma.client.findMany({
       where: { companyId, deletedAt: { not: null } },
       orderBy: { deletedAt: "desc" },
-      select: { id: true, name: true, companyName: true, deletedAt: true, deletedById: true },
+      select: { id: true, name: true, companyName: true, email: true, phone: true, deletedAt: true, deletedById: true },
     }),
     prisma.employee.findMany({
       where: { companyId, deletedAt: { not: null } },
       orderBy: { deletedAt: "desc" },
-      select: { id: true, fullName: true, email: true, deletedAt: true, deletedById: true },
+      select: {
+        id: true, fullName: true, employeeCode: true, email: true,
+        deletedAt: true, deletedById: true, department: { select: { name: true } },
+      },
+    }),
+    prisma.task.findMany({
+      where: { deletedAt: { not: null }, project: { companyId } },
+      orderBy: { deletedAt: "desc" },
+      select: {
+        id: true, name: true, description: true, status: true, priority: true, dueDate: true,
+        deletedAt: true, deletedById: true,
+        project: { select: { name: true } },
+        assignees: { select: { employee: { select: { fullName: true } } } },
+      },
     }),
   ]);
 
@@ -58,6 +87,14 @@ export async function getTrash(companyId: string): Promise<TrashItem[]> {
       id: p.id,
       label: p.name,
       sublabel: p.client?.name ?? null,
+      details: [
+        detail("Client", p.client?.name),
+        detail("Status", titleCase(p.status)),
+        detail("Type", titleCase(p.type)),
+        detail("Priority", titleCase(p.priority)),
+        detail("Due date", p.dueDate ? formatDate(p.dueDate) : null),
+        detail("Description", p.description),
+      ].filter(Boolean) as TrashDetail[],
       deletedAt: p.deletedAt!.toISOString(),
       deletedById: p.deletedById,
       deletedByName: null,
@@ -68,6 +105,9 @@ export async function getTrash(companyId: string): Promise<TrashItem[]> {
       id: c.id,
       label: c.name,
       sublabel: c.companyName ?? null,
+      details: [detail("Company", c.companyName), detail("Email", c.email), detail("Phone", c.phone)].filter(
+        Boolean,
+      ) as TrashDetail[],
       deletedAt: c.deletedAt!.toISOString(),
       deletedById: c.deletedById,
       deletedByName: null,
@@ -78,8 +118,31 @@ export async function getTrash(companyId: string): Promise<TrashItem[]> {
       id: e.id,
       label: e.fullName,
       sublabel: e.email,
+      details: [
+        detail("Code", e.employeeCode),
+        detail("Email", e.email),
+        detail("Department", e.department?.name),
+      ].filter(Boolean) as TrashDetail[],
       deletedAt: e.deletedAt!.toISOString(),
       deletedById: e.deletedById,
+      deletedByName: null,
+    })),
+    ...tasks.map((t) => ({
+      type: "task" as const,
+      typeLabel: "Task",
+      id: t.id,
+      label: t.name,
+      sublabel: t.project.name,
+      details: [
+        detail("Project", t.project.name),
+        detail("Status", titleCase(t.status)),
+        detail("Priority", titleCase(t.priority)),
+        detail("Due date", t.dueDate ? formatDate(t.dueDate) : null),
+        detail("Assignees", t.assignees.map((a) => a.employee.fullName).join(", ") || null),
+        detail("Description", t.description),
+      ].filter(Boolean) as TrashDetail[],
+      deletedAt: t.deletedAt!.toISOString(),
+      deletedById: t.deletedById,
       deletedByName: null,
     })),
   ];

@@ -58,7 +58,7 @@ export function TaskEdit({
   }
 
   async function onDelete() {
-    if (!(await confirmDialog({ message: "Delete this task? This can't be undone.", tone: "danger" }))) return;
+    if (!(await confirmDialog({ message: "Move this task to trash? A Super Admin can restore it.", tone: "danger" }))) return;
     start(async () => {
       const res = await deleteTask(taskId);
       if (res.error) toast.error(res.error);
