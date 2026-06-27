@@ -10,7 +10,15 @@ export type AwayEntry = {
 export type DayCell = { holiday?: string; away: AwayEntry[]; announcements: string[] };
 export type MonthData = {
   byDay: Record<string, DayCell>;
-  announcements: { id: string; title: string; body: string | null; dateISO: string; authorId: string | null }[];
+  announcements: {
+    id: string;
+    title: string;
+    body: string | null;
+    dateISO: string;
+    authorId: string | null;
+    authorName: string | null;
+    postedAt: string; // ISO datetime the announcement was posted
+  }[];
   holidays: { id: string; dateISO: string; name: string }[];
 };
 
@@ -37,7 +45,7 @@ export async function getMonthCalendar(
     prisma.announcement.findMany({
       where: { companyId, date: { gte: start, lt: end } },
       orderBy: { date: "asc" },
-      select: { id: true, title: true, body: true, date: true, authorId: true },
+      select: { id: true, title: true, body: true, date: true, authorId: true, createdAt: true },
     }),
     prisma.leaveRequest.findMany({
       where: {
@@ -75,6 +83,20 @@ export async function getMonthCalendar(
     }
   }
 
+  // Resolve announcement authors (employee name, else email) for the detail popup.
+  const authorIds = [...new Set(announcements.map((a) => a.authorId).filter((x): x is string => !!x))];
+  const authors = authorIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: authorIds } },
+        select: { id: true, email: true, employee: { select: { fullName: true } } },
+      })
+    : [];
+  const authorName = (uid: string | null): string | null => {
+    if (!uid) return null;
+    const u = authors.find((x) => x.id === uid);
+    return u?.employee?.fullName ?? u?.email ?? null;
+  };
+
   return {
     byDay,
     announcements: announcements.map((a) => ({
@@ -83,6 +105,8 @@ export async function getMonthCalendar(
       body: a.body,
       dateISO: iso(a.date),
       authorId: a.authorId,
+      authorName: authorName(a.authorId),
+      postedAt: a.createdAt.toISOString(),
     })),
     holidays: holidays.map((h) => ({ id: h.id, dateISO: iso(h.date), name: h.name })),
   };

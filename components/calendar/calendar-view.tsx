@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icons";
 import { DateActionModal } from "@/components/calendar/date-action-modal";
 import { AnnouncementActions } from "@/components/calendar/announcement-actions";
 import { HolidayActions } from "@/components/calendar/holiday-actions";
+import { CalendarDetailModal, type CalendarDetail } from "@/components/calendar/detail-modal";
 import { cn } from "@/lib/cn";
 
 type Balance = {
@@ -61,6 +62,7 @@ export function CalendarView({
   const [hoverEnd, setHoverEnd] = useState<string | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState<{ start: string; end: string } | null>(null);
+  const [detail, setDetail] = useState<CalendarDetail | null>(null);
 
   const selectable = canApplyLeave || canManage;
 
@@ -194,12 +196,16 @@ export function CalendarView({
             ) : (
               <ul className="space-y-2">
                 {data.holidays.map((h) => (
-                  <li key={h.id} className="flex items-center gap-3 text-sm">
+                  <li
+                    key={h.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-0.5 text-sm hover:bg-canvas"
+                    onClick={() => setDetail({ kind: "holiday", title: h.name, dateISO: h.dateISO })}
+                  >
                     <span className="size-2 rounded-full bg-emerald-500" />
                     <span className="text-faint">{h.dateISO.slice(8)}</span>
                     <span className="font-medium text-content">{h.name}</span>
                     {canManage && (
-                      <span className="ml-auto">
+                      <span className="ml-auto" onClick={(e) => e.stopPropagation()}>
                         <HolidayActions holiday={h} />
                       </span>
                     )}
@@ -225,12 +231,29 @@ export function CalendarView({
                   const canEdit =
                     canManage && (isSuperAdmin || a.authorId === currentUserId || a.authorId === null);
                   return (
-                    <li key={a.id}>
+                    <li
+                      key={a.id}
+                      className="cursor-pointer rounded-lg px-1 py-1 hover:bg-canvas"
+                      onClick={() =>
+                        setDetail({
+                          kind: "announcement",
+                          title: a.title,
+                          body: a.body,
+                          dateISO: a.dateISO,
+                          authorName: a.authorName,
+                          postedAt: a.postedAt,
+                        })
+                      }
+                    >
                       <div className="flex items-center gap-2">
                         <span className="size-2 shrink-0 rounded-full bg-amber-500" />
                         <p className="text-sm font-medium text-content">{a.title}</p>
                         <span className="ml-auto text-xs text-faint">{a.dateISO.slice(8)}</span>
-                        {canEdit && <AnnouncementActions announcement={a} />}
+                        {canEdit && (
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <AnnouncementActions announcement={a} />
+                          </span>
+                        )}
                       </div>
                       {a.body && <p className="mt-0.5 pl-4 text-sm text-muted">{a.body}</p>}
                     </li>
@@ -252,6 +275,8 @@ export function CalendarView({
           balances={balances}
         />
       )}
+
+      {detail && <CalendarDetailModal item={detail} onClose={() => setDetail(null)} />}
     </div>
   );
 }
