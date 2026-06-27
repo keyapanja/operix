@@ -126,7 +126,7 @@ export function LeaveTabs({
                           <Badge tone={s.tone}>{s.label}</Badge>
                           {r.pendingEdit && (
                             <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/25">
-                              Edit pending
+                              Edit requested
                             </span>
                           )}
                         </td>

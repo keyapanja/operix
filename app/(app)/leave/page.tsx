@@ -17,6 +17,13 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 const asPending = (j: unknown): LeaveDetail["pendingEdit"] =>
   (j as LeaveDetail["pendingEdit"]) ?? null;
 
+const REQUEST_SELECT = {
+  id: true, status: true, kind: true, days: true, isHalfDay: true,
+  startDate: true, endDate: true, reason: true, createdAt: true,
+  leaveTypeId: true, pendingEdit: true, hrApprovedById: true, decidedAt: true,
+  leaveType: { select: { name: true } },
+} as const;
+
 export default async function LeavePage() {
   const session = await requirePage();
   const companyId = session.companyId;
@@ -34,29 +41,9 @@ export default async function LeavePage() {
         where: { companyId, employeeId: session.employeeId },
         orderBy: { createdAt: "desc" },
         take: 50,
-        select: {
-          id: true, status: true, kind: true, days: true, isHalfDay: true,
-          startDate: true, endDate: true, reason: true, createdAt: true,
-          leaveTypeId: true, pendingEdit: true,
-          leaveType: { select: { name: true } },
-        },
+        select: REQUEST_SELECT,
       })
     : [];
-
-  const myDetails: LeaveDetail[] = myRequests.map((r) => ({
-    id: r.id,
-    kind: r.kind,
-    typeName: r.leaveType?.name ?? null,
-    leaveTypeId: r.leaveTypeId,
-    startDate: iso(r.startDate),
-    endDate: iso(r.endDate),
-    days: r.days,
-    isHalfDay: r.isHalfDay,
-    reason: r.reason,
-    status: r.status,
-    appliedAt: r.createdAt.toISOString(),
-    pendingEdit: asPending(r.pendingEdit),
-  }));
 
   // Manager data
   const [allRequests, leaveTypes, employees, canApprove] = await Promise.all([
@@ -64,13 +51,7 @@ export default async function LeavePage() {
       ? prisma.leaveRequest.findMany({
           where: { companyId },
           orderBy: { createdAt: "desc" },
-          select: {
-            id: true, status: true, kind: true, days: true, isHalfDay: true,
-            startDate: true, endDate: true, reason: true, createdAt: true,
-            leaveTypeId: true, pendingEdit: true,
-            employee: { select: { fullName: true } },
-            leaveType: { select: { name: true } },
-          },
+          select: { ...REQUEST_SELECT, employee: { select: { fullName: true } } },
         })
       : Promise.resolve([]),
     isManager
@@ -93,6 +74,39 @@ export default async function LeavePage() {
     isManager ? hasPermission(companyId, session.role, "leave:approve") : Promise.resolve(false),
   ]);
 
+  // Resolve approver names (the approver's userId → employee name / email).
+  const approverIds = [
+    ...new Set([...myRequests, ...allRequests].map((r) => r.hrApprovedById).filter((x): x is string => !!x)),
+  ];
+  const approvers = approverIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: approverIds } },
+        select: { id: true, email: true, employee: { select: { fullName: true } } },
+      })
+    : [];
+  const approverName = (uid: string | null): string | null => {
+    if (!uid) return null;
+    const u = approvers.find((a) => a.id === uid);
+    return u?.employee?.fullName ?? u?.email ?? null;
+  };
+
+  const myDetails: LeaveDetail[] = myRequests.map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    typeName: r.leaveType?.name ?? null,
+    leaveTypeId: r.leaveTypeId,
+    startDate: iso(r.startDate),
+    endDate: iso(r.endDate),
+    days: r.days,
+    isHalfDay: r.isHalfDay,
+    reason: r.reason,
+    status: r.status,
+    appliedAt: r.createdAt.toISOString(),
+    pendingEdit: asPending(r.pendingEdit),
+    decidedByName: approverName(r.hrApprovedById),
+    decidedAt: r.decidedAt?.toISOString() ?? null,
+  }));
+
   const allDetails: LeaveDetail[] = allRequests.map((r) => ({
     id: r.id,
     kind: r.kind,
@@ -107,6 +121,8 @@ export default async function LeavePage() {
     appliedAt: r.createdAt.toISOString(),
     employeeName: r.employee.fullName,
     pendingEdit: asPending(r.pendingEdit),
+    decidedByName: approverName(r.hrApprovedById),
+    decidedAt: r.decidedAt?.toISOString() ?? null,
   }));
 
   return (

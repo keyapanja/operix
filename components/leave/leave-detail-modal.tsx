@@ -33,6 +33,8 @@ export type LeaveDetail = {
   status: ApprovalStatus;
   appliedAt: string; // ISO datetime
   employeeName?: string;
+  decidedByName: string | null;
+  decidedAt: string | null;
   pendingEdit: {
     startDate: string;
     endDate: string;
@@ -145,6 +147,18 @@ export function LeaveDetailModal({
           </dd>
           <dt className="text-faint">Applied</dt>
           <dd className="col-span-2 text-content">{formatDateTime(req.appliedAt)}</dd>
+          {(req.status === "HR_APPROVED" || req.status === "APPROVED") && req.decidedByName && (
+            <>
+              <dt className="text-faint">Approved by</dt>
+              <dd className="col-span-2 text-content">{req.decidedByName}</dd>
+            </>
+          )}
+          {(req.status === "HR_APPROVED" || req.status === "APPROVED") && req.decidedAt && (
+            <>
+              <dt className="text-faint">Approved on</dt>
+              <dd className="col-span-2 text-content">{formatDateTime(req.decidedAt)}</dd>
+            </>
+          )}
           {req.reason && (
             <>
               <dt className="text-faint">Reason</dt>

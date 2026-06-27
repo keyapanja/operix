@@ -20,7 +20,7 @@ export function RequestActions({
     return null;
   }
 
-  const approveLabel = status === "PENDING" ? "Approve (Manager)" : "Approve (HR)";
+  const approveLabel = "Approve";
 
   return (
     <div className="flex justify-end gap-2">

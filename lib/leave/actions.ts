@@ -288,7 +288,11 @@ export async function createLeaveRequest(
   return { ok: true };
 }
 
-/** Advances Employee → Manager → HR. Each call moves one step forward. */
+/**
+ * Single-step approval: anyone with `leave:approve` (other than the applicant)
+ * finalizes the request in one click. The approver + decision time are recorded
+ * on `hrApprovedById` / `decidedAt` for the audit trail shown in the details.
+ */
 export async function approveLeave(id: string): Promise<LeaveState> {
   const session = await requireCapability("leave:approve");
   const req = await prisma.leaveRequest.findFirst({
@@ -297,50 +301,31 @@ export async function approveLeave(id: string): Promise<LeaveState> {
       status: true,
       startDate: true,
       endDate: true,
-      managerApprovedById: true,
       employee: { select: { user: { select: { id: true } } } },
     },
   });
   if (!req) return { error: "Request not found" };
-
+  if (req.status === "HR_APPROVED" || req.status === "APPROVED" || req.status === "REJECTED") {
+    return { error: "This request has already been decided" };
+  }
   // Segregation of duties: you can't approve your own leave request.
   if (req.employee.user?.id === session.userId) {
     return { error: "You can't approve your own leave request." };
   }
 
-  let newStatus: "MANAGER_APPROVED" | "HR_APPROVED";
-  if (req.status === "PENDING") {
-    newStatus = "MANAGER_APPROVED";
-    await prisma.leaveRequest.update({
-      where: { id },
-      data: { status: newStatus, managerApprovedById: session.userId },
-    });
-  } else if (req.status === "MANAGER_APPROVED") {
-    // The final (HR) approval must be a different person than the manager step.
-    if (req.managerApprovedById === session.userId) {
-      return { error: "The final approval must be done by someone other than the manager who approved it." };
-    }
-    newStatus = "HR_APPROVED";
-    await prisma.leaveRequest.update({
-      where: { id },
-      data: { status: newStatus, hrApprovedById: session.userId, decidedAt: new Date() },
-    });
-  } else {
-    return { error: "This request has already been decided" };
-  }
+  await prisma.leaveRequest.update({
+    where: { id },
+    data: { status: "HR_APPROVED", hrApprovedById: session.userId, decidedAt: new Date() },
+  });
 
   // Notify the employee.
   try {
     const empUserId = req.employee.user?.id;
     if (empUserId) {
-      const range = `${formatDate(req.startDate)} – ${formatDate(req.endDate)}`;
-      const final = newStatus === "HR_APPROVED";
       await notifyUsers(
         [empUserId],
-        final ? "Leave approved" : "Leave approved by manager",
-        final
-          ? `Your leave request (${range}) was approved.`
-          : `Your leave request (${range}) was approved by your manager — pending final approval.`,
+        "Leave approved",
+        `Your leave request (${formatDate(req.startDate)} – ${formatDate(req.endDate)}) was approved.`,
       );
     }
   } catch (e) {
