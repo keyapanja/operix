@@ -97,6 +97,7 @@ export const NAV: NavItem[] = [
       { label: "All requests", href: "/leave/requests", icon: "calendarDays", action: "leave:manage" },
     ],
   },
+  { label: "Extension", href: "/extension", icon: "download" },
   { label: "Organization", href: "/organization", icon: "building", action: "org:manage" },
   { label: "Trash", href: "/trash", icon: "trash", superAdminOnly: true },
 ];
