@@ -4,12 +4,18 @@ import { useState, useTransition, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { deleteAttachment } from "@/lib/projects/actions";
 import { Icon } from "@/components/ui/icons";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { confirmDialog } from "@/components/ui/confirm";
+import { safeHref } from "@/lib/url";
+import { cn } from "@/lib/cn";
 
 type Att = {
   id: string;
   fileName: string;
+  title?: string | null;
+  url?: string | null;
   mimeType: string | null;
   sizeBytes: number | null;
   createdAt: string;
@@ -26,28 +32,29 @@ function fmtBytes(n: number | null): string {
  * Shared attachments list + uploader. Works for any owner (task, project, …) —
  * pass the matching upload endpoint as `uploadUrl`. Files are served via
  * `/api/files/[id]`; deletion goes through the shared `deleteAttachment` action.
+ * With `allowLinks`, each attachment can be a file (optionally titled) OR a link.
  */
 export function AttachmentsPanel({
   uploadUrl,
   canEdit,
   initial,
+  allowLinks = false,
 }: {
   uploadUrl: string;
   canEdit: boolean;
   initial: Att[];
+  allowLinks?: boolean;
 }) {
   const router = useRouter();
-  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [pending, start] = useTransition();
+  const [mode, setMode] = useState<"file" | "link">("file");
+  const [title, setTitle] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
 
-  async function onFilesPicked(e: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = "";
-    if (!files.length) return;
-    setUploading(true);
+  async function post(fd: FormData, okMsg: string): Promise<boolean> {
+    setBusy(true);
     try {
-      const fd = new FormData();
-      for (const f of files) fd.append("files", f);
       const res = await fetch(uploadUrl, { method: "POST", body: fd });
       if (!res.ok) {
         let msg = "Upload failed";
@@ -58,20 +65,51 @@ export function AttachmentsPanel({
           msg = j?.error || `Upload failed (HTTP ${res.status})`;
         }
         toast.error(msg);
-      } else {
-        toast.success(files.length > 1 ? `${files.length} files uploaded` : "File uploaded");
-        router.refresh();
+        return false;
       }
+      toast.success(okMsg);
+      router.refresh();
+      return true;
     } catch {
       toast.error("Upload failed");
+      return false;
     } finally {
-      setUploading(false);
+      setBusy(false);
+    }
+  }
+
+  async function onFilesPicked(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length) return;
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    // A custom title only makes sense for a single file.
+    if (title.trim() && files.length === 1) fd.append("title", title.trim());
+    const ok = await post(fd, files.length > 1 ? `${files.length} files uploaded` : "File uploaded");
+    if (ok) setTitle("");
+  }
+
+  async function addLink() {
+    const u = linkUrl.trim();
+    if (!u) {
+      toast.error("Enter a link URL.");
+      return;
+    }
+    const fd = new FormData();
+    fd.append("url", u);
+    if (title.trim()) fd.append("title", title.trim());
+    const ok = await post(fd, "Link added");
+    if (ok) {
+      setTitle("");
+      setLinkUrl("");
     }
   }
 
   async function onDelete(att: Att) {
+    const label = att.title || att.fileName;
     const ok = await confirmDialog({
-      message: `Delete "${att.fileName}"? This can't be undone.`,
+      message: `Delete "${label}"? This can't be undone.`,
       tone: "danger",
       confirmLabel: "Delete",
     });
@@ -90,45 +128,97 @@ export function AttachmentsPanel({
   return (
     <div>
       {initial.length === 0 ? (
-        <p className="text-sm text-muted">No files attached.</p>
+        <p className="text-sm text-muted">No attachments yet.</p>
       ) : (
         <ul className="space-y-1.5">
-          {initial.map((a) => (
-            <li key={a.id} className="flex items-center gap-2 rounded-lg bg-canvas px-2.5 py-2 text-sm">
-              <Icon name="folder" className="size-4 shrink-0 text-faint" />
-              <a
-                href={`/api/files/${a.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 truncate font-medium text-content hover:text-accent-strong hover:underline"
-              >
-                {a.fileName}
-              </a>
-              {a.sizeBytes != null && <span className="shrink-0 text-xs text-faint">{fmtBytes(a.sizeBytes)}</span>}
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => onDelete(a)}
-                  disabled={pending}
-                  className="shrink-0 text-faint hover:text-red-600 disabled:opacity-50"
-                  aria-label={`Delete ${a.fileName}`}
+          {initial.map((a) => {
+            const label = a.title || a.fileName;
+            const isLink = !!a.url;
+            return (
+              <li key={a.id} className="flex items-center gap-2 rounded-lg bg-canvas px-2.5 py-2 text-sm">
+                <Icon name={isLink ? "externalLink" : "folder"} className="size-4 shrink-0 text-faint" />
+                <a
+                  href={a.url ? safeHref(a.url) : `/api/files/${a.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 truncate font-medium text-content hover:text-accent-strong hover:underline"
                 >
-                  <Icon name="trash" className="size-4" />
-                </button>
-              )}
-            </li>
-          ))}
+                  {label}
+                </a>
+                {isLink ? (
+                  <span className="shrink-0 text-xs text-faint">Link</span>
+                ) : (
+                  a.sizeBytes != null && <span className="shrink-0 text-xs text-faint">{fmtBytes(a.sizeBytes)}</span>
+                )}
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(a)}
+                    disabled={pending}
+                    className="shrink-0 text-faint hover:text-red-600 disabled:opacity-50"
+                    aria-label={`Delete ${label}`}
+                  >
+                    <Icon name="trash" className="size-4" />
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
-      {canEdit && (
+
+      {canEdit && allowLinks && (
+        <div className="mt-3 rounded-xl bg-canvas p-3 ring-1 ring-inset ring-line">
+          <div className="mb-2 inline-flex rounded-lg bg-surface p-0.5">
+            {(["file", "link"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={cn(
+                  "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                  mode === m ? "bg-canvas text-content shadow-sm" : "text-muted hover:text-content",
+                )}
+              >
+                {m === "file" ? "Upload file" : "Add link"}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" />
+            {mode === "file" ? (
+              <label
+                className={cn(
+                  "inline-flex cursor-pointer items-center gap-2 rounded-xl bg-surface px-3 py-2 text-sm font-medium text-content ring-1 ring-inset ring-line transition-colors hover:bg-canvas",
+                  busy && "pointer-events-none opacity-60",
+                )}
+              >
+                <Icon name="plus" className="size-4" />
+                {busy ? "Uploading…" : "Choose file(s)"}
+                <input type="file" multiple className="hidden" disabled={busy} onChange={onFilesPicked} />
+              </label>
+            ) : (
+              <div className="flex gap-2">
+                <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://…" />
+                <Button size="sm" onClick={addLink} disabled={busy}>
+                  {busy ? "Adding…" : "Add link"}
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {canEdit && !allowLinks && (
         <label
-          className={`mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-canvas px-3 py-2 text-sm font-medium text-content ring-1 ring-inset ring-line transition-colors hover:bg-surface ${
-            uploading ? "pointer-events-none opacity-60" : ""
-          }`}
+          className={cn(
+            "mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-canvas px-3 py-2 text-sm font-medium text-content ring-1 ring-inset ring-line transition-colors hover:bg-surface",
+            busy && "pointer-events-none opacity-60",
+          )}
         >
           <Icon name="plus" className="size-4" />
-          {uploading ? "Uploading…" : "Add files"}
-          <input type="file" multiple className="hidden" disabled={uploading} onChange={onFilesPicked} />
+          {busy ? "Uploading…" : "Add files"}
+          <input type="file" multiple className="hidden" disabled={busy} onChange={onFilesPicked} />
         </label>
       )}
     </div>

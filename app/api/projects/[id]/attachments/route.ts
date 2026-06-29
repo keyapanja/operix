@@ -29,8 +29,29 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   } catch {
     return NextResponse.json({ error: "Invalid upload" }, { status: 400 });
   }
+  const title = String(form.get("title") ?? "").trim().slice(0, 200) || null;
+  const url = String(form.get("url") ?? "").trim();
+
+  // Link attachment (no uploaded file). Only http(s) links are accepted.
+  if (url) {
+    if (!/^https?:\/\//i.test(url)) {
+      return NextResponse.json({ error: "Link must start with http:// or https://" }, { status: 400 });
+    }
+    const row = await prisma.attachment.create({
+      data: {
+        projectId,
+        url: url.slice(0, 2000),
+        title,
+        fileName: title || url.slice(0, 200),
+        uploadedBy: session.userId,
+      },
+      select: { id: true, fileName: true },
+    });
+    return NextResponse.json({ ok: true, attachments: [row] });
+  }
+
   const files = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
-  if (!files.length) return NextResponse.json({ error: "No files provided" }, { status: 400 });
+  if (!files.length) return NextResponse.json({ error: "No files or link provided" }, { status: 400 });
 
   const created: { id: string; fileName: string; sizeBytes: number | null }[] = [];
   for (const file of files) {
@@ -41,6 +62,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         projectId,
         fileKey: key,
         fileName: file.name.slice(0, 200) || "file",
+        // A custom title only applies when a single file is uploaded.
+        title: files.length === 1 ? title : null,
         mimeType: file.type || null,
         sizeBytes: file.size,
         uploadedBy: session.userId,

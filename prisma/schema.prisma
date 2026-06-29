@@ -662,8 +662,10 @@ model Attachment {
   projectId  String?
   announcementId String?
   leaveRequestId String?
-  fileKey    String
+  fileKey    String?  // null for link-only attachments
   fileName   String
+  title      String?  // optional display label (falls back to fileName)
+  url        String?  // set when the attachment is a link, not an uploaded file
   mimeType   String?
   sizeBytes  Int?
   uploadedBy String // userId

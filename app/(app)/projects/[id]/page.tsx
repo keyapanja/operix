@@ -63,7 +63,7 @@ export default async function ProjectDetailPage({
         },
         attachments: {
           orderBy: { createdAt: "desc" },
-          select: { id: true, fileName: true, mimeType: true, sizeBytes: true, createdAt: true },
+          select: { id: true, fileName: true, title: true, url: true, mimeType: true, sizeBytes: true, createdAt: true },
         },
       },
     }),
@@ -167,9 +167,12 @@ export default async function ProjectDetailPage({
             <AttachmentsPanel
               uploadUrl={`/api/projects/${project.id}/attachments`}
               canEdit
+              allowLinks
               initial={project.attachments.map((a) => ({
                 id: a.id,
                 fileName: a.fileName,
+                title: a.title,
+                url: a.url,
                 mimeType: a.mimeType,
                 sizeBytes: a.sizeBytes,
                 createdAt: a.createdAt.toISOString(),

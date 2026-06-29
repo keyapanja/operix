@@ -23,6 +23,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     select: { fileKey: true, fileName: true, mimeType: true },
   });
   if (!att) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!att.fileKey) return NextResponse.json({ error: "Not a file" }, { status: 404 }); // link-only attachment
 
   let data: Buffer;
   try {

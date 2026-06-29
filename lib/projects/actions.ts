@@ -385,7 +385,7 @@ export async function deleteAttachment(attachmentId: string): Promise<ProjectSta
   }
 
   await prisma.attachment.delete({ where: { id: att.id } });
-  await deleteUpload(att.fileKey);
+  if (att.fileKey) await deleteUpload(att.fileKey); // link attachments have no file on disk
   if (att.taskId) revalidatePath(`/tasks/${att.taskId}`);
   if (att.projectId) revalidatePath(`/projects/${att.projectId}`);
   return { ok: true };
