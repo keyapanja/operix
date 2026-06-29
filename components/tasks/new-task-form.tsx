@@ -132,39 +132,48 @@ export function NewTaskForm({
     if (!projectId) return setError("Pick a project");
     if (!name.trim()) return setError("Task title is required");
     start(async () => {
-      const res = await createTask({
-        projectId,
-        name: name.trim(),
-        description: description.trim() || null,
-        serviceId: serviceId || null,
-        priority: priority as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
-        status: "TODO",
-        dueDate: dueDate || null,
-        clientDeadline: clientDeadline || null,
-        assigneeIds,
-        checklist,
-      });
-      if (res.error) return setError(res.error);
-      if (!res.task) return;
-
-      if (files.length) {
-        try {
-          const fd = new FormData();
-          for (const p of files) fd.append("files", p.file);
-          const up = await fetch(`/api/tasks/${res.task.id}/attachments`, { method: "POST", body: fd });
-          if (!up.ok) {
-            const j = await up.json().catch(() => null);
-            const why =
-              up.status === 413
-                ? "the file is too large for the server/proxy"
-                : j?.error || up.statusText || `HTTP ${up.status}`;
-            setError(`Task created, but uploading files failed: ${why}`);
-          }
-        } catch {
-          setError("Task created, but uploading files failed.");
+      try {
+        const res = await createTask({
+          projectId,
+          name: name.trim(),
+          description: description.trim() || null,
+          serviceId: serviceId || null,
+          priority: priority as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
+          status: "TODO",
+          dueDate: dueDate || null,
+          clientDeadline: clientDeadline || null,
+          assigneeIds,
+          checklist,
+        });
+        if (res.error) {
+          setError(res.error);
+          return;
         }
+        if (!res.task) return;
+
+        if (files.length) {
+          try {
+            const fd = new FormData();
+            for (const p of files) fd.append("files", p.file);
+            const up = await fetch(`/api/tasks/${res.task.id}/attachments`, { method: "POST", body: fd });
+            if (!up.ok) {
+              const j = await up.json().catch(() => null);
+              const why =
+                up.status === 413
+                  ? "the file is too large for the server/proxy"
+                  : j?.error || up.statusText || `HTTP ${up.status}`;
+              setError(`Task created, but uploading files failed: ${why}`);
+            }
+          } catch {
+            setError("Task created, but uploading files failed.");
+          }
+        }
+        router.push(`/tasks/${res.task.id}`);
+      } catch {
+        setError(
+          "Couldn't create the task. If this keeps happening, the database may be missing a recent update — run “npx prisma db push” (local) or redeploy (prod).",
+        );
       }
-      router.push(`/tasks/${res.task.id}`);
     });
   }
 
