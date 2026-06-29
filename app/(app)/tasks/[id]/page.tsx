@@ -224,7 +224,7 @@ export default async function TaskDetailPage({
 
           {/* Review workflow — submit / review / approve */}
           <Card className="order-1 p-5 lg:order-2">
-            <h3 className="mb-3 text-sm font-semibold text-content">Workflow</h3>
+            <h3 className="mb-3 text-sm font-semibold text-content">Final Link / Status</h3>
             <TaskWorkflow
               taskId={task.id}
               status={task.status}
