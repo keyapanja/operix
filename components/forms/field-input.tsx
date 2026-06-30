@@ -5,6 +5,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Icon } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
+import { isVisible } from "@/lib/forms/types";
 import type { FieldDef, FieldValue, Lookups, RepeaterRows, ScalarValue } from "@/lib/forms/types";
 
 export type { FieldValue } from "@/lib/forms/types";
@@ -177,7 +178,9 @@ export function FieldInput({
                 )}
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {subs.map((sf) => (
+                {subs
+                  .filter((sf) => isVisible(sf, row as Record<string, unknown>))
+                  .map((sf) => (
                   <div key={sf.id} className={cn((sf.width ?? "full") === "half" ? "sm:col-span-1" : "sm:col-span-2")}>
                     <FieldInput field={sf} value={row[sf.id]} disabled={disabled} lookups={lookups}
                       onChange={(v) => updateRow(i, sf.id, v as ScalarValue)} />

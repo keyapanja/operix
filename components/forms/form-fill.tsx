@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { toast } from "@/components/ui/toast";
 import { FieldInput, type FieldValue } from "@/components/forms/field-input";
-import { isInputField, type FieldDef, type Lookups } from "@/lib/forms/types";
+import { isInputField, isVisible, type FieldDef, type Lookups } from "@/lib/forms/types";
 import { cn } from "@/lib/cn";
 
 type SubmitResult = { ok?: boolean; error?: string; fieldErrors?: Record<string, string> };
@@ -36,8 +36,10 @@ export function FormFill({
 
   function submit() {
     const errs: Record<string, string> = {};
+    const vals = values as Record<string, unknown>;
     for (const f of fields) {
       if (!isInputField(f.type) || !f.required) continue;
+      if (!isVisible(f, vals)) continue;
       const v = values[f.id];
       let empty: boolean;
       if (f.type === "daterange") empty = !(Array.isArray(v) && v[0] && v[1]);
@@ -89,7 +91,9 @@ export function FormFill({
         <p className="mt-6 text-sm text-muted">This form has no fields yet.</p>
       ) : (
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {fields.map((f) => (
+          {fields
+            .filter((f) => isVisible(f, values as Record<string, unknown>))
+            .map((f) => (
             <div key={f.id} className={cn((f.width ?? "full") === "half" ? "sm:col-span-1" : "sm:col-span-2")}>
               <FieldInput
                 field={f}

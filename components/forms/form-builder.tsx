@@ -302,6 +302,7 @@ export function FormBuilder({ initial }: { initial: Initial }) {
               selected ? (
                 <FieldConfigPanel
                   field={selected}
+                  siblings={fields}
                   onChange={(patch) => patchField(selected.id, patch)}
                   onDelete={() => deleteField(selected.id)}
                   onDuplicate={() => duplicateField(selected.id)}

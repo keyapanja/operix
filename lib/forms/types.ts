@@ -30,6 +30,10 @@ export type RefSource = "clients" | "projects" | "employees";
 
 export type FieldOption = { id: string; label: string };
 
+/** Conditional visibility: show the field only when another field's answer matches. */
+export type CondOp = "eq" | "neq" | "gt" | "lt" | "contains" | "empty" | "notEmpty";
+export type Condition = { fieldId: string; op: CondOp; value?: string };
+
 export type FieldDef = {
   id: string; // stable key — used in submission data; never reused
   type: FieldType;
@@ -40,6 +44,9 @@ export type FieldDef = {
   options?: FieldOption[]; // dropdown / multiselect / radio / checkbox
   source?: RefSource; // reference
   subFields?: FieldDef[]; // repeater (scalar input fields only — no nesting)
+  formula?: string; // calculation — e.g. "{qtyId} * {priceId}" or "{repId.subId}" (column sum)
+  decimals?: number | null; // calculation — round to N decimals
+  visibleWhen?: Condition; // show only when this condition holds (else hidden + skipped)
   min?: number | null; // number
   max?: number | null; // number
   maxLength?: number | null; // text / textarea
@@ -157,6 +164,15 @@ const FieldDefZ: z.ZodType<FieldDef> = z.lazy(() =>
     options: z.array(OptionZ).max(100).optional(),
     source: SourceZ.optional(),
     subFields: z.array(FieldDefZ).max(50).optional(),
+    formula: z.string().max(500).optional(),
+    decimals: z.number().int().min(0).max(6).nullable().optional(),
+    visibleWhen: z
+      .object({
+        fieldId: z.string().max(40),
+        op: z.enum(["eq", "neq", "gt", "lt", "contains", "empty", "notEmpty"]),
+        value: z.string().max(200).optional(),
+      })
+      .optional(),
     min: z.number().nullable().optional(),
     max: z.number().nullable().optional(),
     maxLength: z.number().int().positive().nullable().optional(),
@@ -170,6 +186,37 @@ export const FormSchemaZ = z.object({ fields: z.array(FieldDefZ).max(200) });
 export function parseSchema(json: unknown): FormSchema {
   const r = FormSchemaZ.safeParse(json);
   return r.success ? (r.data as FormSchema) : { fields: [] };
+}
+
+/**
+ * Whether a field is shown, given the current sibling answers. A field with no
+ * `visibleWhen` is always visible. Evaluated at the same level (top-level fields
+ * see top-level answers; repeater sub-fields see their row's answers).
+ */
+export function isVisible(field: FieldDef, values: Record<string, unknown>): boolean {
+  const c = field.visibleWhen;
+  if (!c || !c.fieldId) return true;
+  const v = values[c.fieldId];
+  const s = v == null ? "" : Array.isArray(v) ? v.join(",") : v === true ? "true" : String(v);
+  const target = (c.value ?? "").trim();
+  switch (c.op) {
+    case "empty":
+      return s.trim() === "";
+    case "notEmpty":
+      return s.trim() !== "";
+    case "eq":
+      return s === target || (Array.isArray(v) && v.includes(target));
+    case "neq":
+      return !(s === target || (Array.isArray(v) && v.includes(target)));
+    case "contains":
+      return Array.isArray(v) ? v.includes(target) : s.toLowerCase().includes(target.toLowerCase());
+    case "gt":
+      return Number(s) > Number(target);
+    case "lt":
+      return Number(s) < Number(target);
+    default:
+      return true;
+  }
 }
 
 export type AnswerErrors = Record<string, string>;
@@ -188,6 +235,7 @@ export function validateAnswers(
 
   for (const f of fields) {
     if (!isInputField(f.type)) continue;
+    if (!isVisible(f, raw)) continue; // hidden by a condition → not stored, not required
     const v = raw[f.id];
 
     if (f.type === "checkbox" || f.type === "multiselect") {

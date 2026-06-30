@@ -4,7 +4,7 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { Icon } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
-import { hasOptions, isInputField, newId, type FieldDef, type FieldOption, type RefSource } from "@/lib/forms/types";
+import { hasOptions, isInputField, newId, type CondOp, type FieldDef, type FieldOption, type RefSource } from "@/lib/forms/types";
 import { RepeaterFieldsEditor } from "@/components/forms/repeater-fields-editor";
 
 const TEXTY = new Set(["text", "textarea", "number", "email", "phone", "dropdown", "reference"]);
@@ -13,20 +13,33 @@ const SOURCE_OPTS = [
   { value: "projects", label: "Projects" },
   { value: "employees", label: "Employees" },
 ];
+const OP_OPTS = [
+  { value: "eq", label: "equals" },
+  { value: "neq", label: "doesn't equal" },
+  { value: "contains", label: "contains" },
+  { value: "gt", label: "greater than" },
+  { value: "lt", label: "less than" },
+  { value: "notEmpty", label: "is answered" },
+  { value: "empty", label: "is empty" },
+];
 
 export function FieldConfigPanel({
   field,
+  siblings,
   onChange,
   onDelete,
   onDuplicate,
 }: {
   field: FieldDef;
+  siblings: FieldDef[];
   onChange: (patch: Partial<FieldDef>) => void;
   onDelete: () => void;
   onDuplicate: () => void;
 }) {
   const input = isInputField(field.type);
   const choice = hasOptions(field.type);
+  const cond = field.visibleWhen;
+  const condFields = siblings.filter((s) => s.id !== field.id && isInputField(s.type));
 
   function setOption(i: number, label: string) {
     const next = [...(field.options ?? [])];
@@ -165,6 +178,43 @@ export function FieldConfigPanel({
             placeholder="No limit"
           />
         </label>
+      )}
+
+      {condFields.length > 0 && (
+        <div className="space-y-2 border-t border-line pt-3">
+          <span className="block text-xs font-medium text-muted">Visibility</span>
+          <Combobox
+            value={cond ? "cond" : "always"}
+            onChange={(v) =>
+              onChange({ visibleWhen: v === "cond" ? { fieldId: condFields[0].id, op: "eq", value: "" } : undefined })
+            }
+            options={[
+              { value: "always", label: "Always show" },
+              { value: "cond", label: "Show only when…" },
+            ]}
+          />
+          {cond && (
+            <div className="space-y-2 rounded-lg p-2 ring-1 ring-inset ring-line">
+              <Combobox
+                value={cond.fieldId}
+                onChange={(v) => onChange({ visibleWhen: { ...cond, fieldId: v } })}
+                options={condFields.map((f) => ({ value: f.id, label: f.label || "(untitled)" }))}
+              />
+              <Combobox
+                value={cond.op}
+                onChange={(v) => onChange({ visibleWhen: { ...cond, op: v as CondOp } })}
+                options={OP_OPTS}
+              />
+              {cond.op !== "empty" && cond.op !== "notEmpty" && (
+                <Input
+                  value={cond.value ?? ""}
+                  onChange={(e) => onChange({ visibleWhen: { ...cond, value: e.target.value } })}
+                  placeholder="value to match"
+                />
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {input && (
