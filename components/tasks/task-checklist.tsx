@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
 
-type Item = { id: string; text: string; isDone: boolean };
+type Item = { id: string; text: string; isDone: boolean; canDelete: boolean };
 
 export function TaskChecklist({
   taskId,
@@ -47,7 +47,8 @@ export function TaskChecklist({
         toast.error(res.error);
         return;
       }
-      if (res.item) setItems((is) => [...is, res.item!]);
+      // You added it, so you can always remove it.
+      if (res.item) setItems((is) => [...is, { ...res.item!, canDelete: true }]);
       setText("");
     });
   }
@@ -90,7 +91,7 @@ export function TaskChecklist({
               <span className={cn("flex-1 text-sm", it.isDone ? "text-faint line-through" : "text-content")}>
                 {it.text}
               </span>
-              {canEdit && (
+              {canEdit && it.canDelete && (
                 <button
                   onClick={() => remove(it.id)}
                   className="text-faint opacity-0 hover:text-red-600 group-hover:opacity-100"

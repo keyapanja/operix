@@ -58,6 +58,7 @@ export function NewTaskForm({
   const [dueDate, setDueDate] = useState("");
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [checklist, setChecklist] = useState<CheckItem[]>([]);
+  const [noChecklist, setNoChecklist] = useState(false);
   const [checkText, setCheckText] = useState("");
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -147,7 +148,8 @@ export function NewTaskForm({
           dueDate: dueDate || null,
           clientDeadline: clientDeadline || null,
           assigneeIds,
-          checklist,
+          checklistEnabled: !noChecklist,
+          checklist: noChecklist ? [] : checklist,
         });
         if (res.error) {
           setError(res.error);
@@ -284,41 +286,54 @@ export function NewTaskForm({
             </div>
           </Field>
 
-          {/* Checklist — seeded from the sub-category template; editable */}
-          <Field label="Checklist" hint={checklist.length ? `${doneCount}/${checklist.length} done` : undefined} className="sm:col-span-2">
+          {/* Checklist — seeded from the sub-category template; editable. Or opt out. */}
+          <Field label="Checklist" hint={!noChecklist && checklist.length ? `${doneCount}/${checklist.length} done` : undefined} className="sm:col-span-2">
             <div>
-              {checklist.length > 0 && (
-                <ul className="mb-2 space-y-1">
-                  {checklist.map((it, i) => (
-                    <li key={i} className="group flex items-center gap-2.5 rounded-lg px-1 py-1.5 hover:bg-canvas">
-                      <input
-                        type="checkbox"
-                        checked={it.isDone}
-                        onChange={() => toggleCheck(i)}
-                        className="size-4 rounded border-line-strong text-brand-600 focus:ring-brand-500"
-                      />
-                      <span className={cn("flex-1 text-sm", it.isDone ? "text-faint line-through" : "text-content")}>{it.text}</span>
-                      <button type="button" onClick={() => removeCheck(i)} className="text-faint opacity-0 hover:text-red-600 group-hover:opacity-100" aria-label="Remove item">
-                        <Icon name="trash" className="size-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="flex gap-2">
-                <Input
-                  value={checkText}
-                  onChange={(e) => setCheckText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addCheckItem();
-                    }
-                  }}
-                  placeholder="Add a checklist item…"
+              <label className="mb-2 flex items-center gap-2 text-sm text-content">
+                <input
+                  type="checkbox"
+                  checked={noChecklist}
+                  onChange={(e) => setNoChecklist(e.target.checked)}
+                  className="size-4 rounded border-line-strong text-brand-600 focus:ring-brand-500"
                 />
-                <Button type="button" variant="secondary" onClick={addCheckItem} disabled={!checkText.trim()}>Add</Button>
-              </div>
+                No checklist for this task
+              </label>
+              {!noChecklist && (
+                <>
+                  {checklist.length > 0 && (
+                    <ul className="mb-2 space-y-1">
+                      {checklist.map((it, i) => (
+                        <li key={i} className="group flex items-center gap-2.5 rounded-lg px-1 py-1.5 hover:bg-canvas">
+                          <input
+                            type="checkbox"
+                            checked={it.isDone}
+                            onChange={() => toggleCheck(i)}
+                            className="size-4 rounded border-line-strong text-brand-600 focus:ring-brand-500"
+                          />
+                          <span className={cn("flex-1 text-sm", it.isDone ? "text-faint line-through" : "text-content")}>{it.text}</span>
+                          <button type="button" onClick={() => removeCheck(i)} className="text-faint opacity-0 hover:text-red-600 group-hover:opacity-100" aria-label="Remove item">
+                            <Icon name="trash" className="size-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex gap-2">
+                    <Input
+                      value={checkText}
+                      onChange={(e) => setCheckText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCheckItem();
+                        }
+                      }}
+                      placeholder="Add a checklist item…"
+                    />
+                    <Button type="button" variant="secondary" onClick={addCheckItem} disabled={!checkText.trim()}>Add</Button>
+                  </div>
+                </>
+              )}
             </div>
           </Field>
         </div>

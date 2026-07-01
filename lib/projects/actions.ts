@@ -280,6 +280,8 @@ export async function createTask(input: {
   assigneeIds?: string[];
   /** Explicit checklist from the form. When omitted, the sub-category template seeds it. */
   checklist?: { text: string; isDone: boolean }[];
+  /** When false, the task is created with no checklist and the detail page hides the box. */
+  checklistEnabled?: boolean;
 }): Promise<{ ok?: boolean; error?: string; task?: KanbanTask }> {
   const session = await requireCapability("task:manage");
   const name = input.name.trim();
@@ -307,6 +309,7 @@ export async function createTask(input: {
       createdById: session.userId, // creator acts as the reviewer in the review flow
       status: input.status ?? "TODO",
       priority: input.priority ?? "MEDIUM",
+      checklistEnabled: input.checklistEnabled ?? true,
       dueDate: input.dueDate ? dateAtUTC(input.dueDate) : null,
       clientDeadline: input.clientDeadline ? dateAtUTC(input.clientDeadline) : null,
       assignees: assigneeIds.length ? { create: assigneeIds.map((employeeId) => ({ employeeId })) } : undefined,
@@ -314,27 +317,30 @@ export async function createTask(input: {
     select: TASK_SELECT,
   });
 
-  // Checklist: an explicit list from the form wins; otherwise seed from the
-  // sub-category's default template.
-  if (input.checklist !== undefined) {
-    const items = input.checklist
-      .map((c) => ({ text: c.text.trim(), isDone: !!c.isDone }))
-      .filter((c) => c.text);
-    if (items.length) {
-      await prisma.checklistItem.createMany({
-        data: items.map((c, i) => ({ taskId: task.id, text: c.text, isDone: c.isDone, orderIndex: i })),
+  // Checklist: skip entirely when the creator opted out. Otherwise an explicit
+  // list from the form wins; else seed from the sub-category's default template.
+  // Creation-time items carry the creator's id so only they can delete them.
+  if (input.checklistEnabled !== false) {
+    if (input.checklist !== undefined) {
+      const items = input.checklist
+        .map((c) => ({ text: c.text.trim(), isDone: !!c.isDone }))
+        .filter((c) => c.text);
+      if (items.length) {
+        await prisma.checklistItem.createMany({
+          data: items.map((c, i) => ({ taskId: task.id, text: c.text, isDone: c.isDone, orderIndex: i, createdById: session.userId })),
+        });
+      }
+    } else if (input.serviceId) {
+      const template = await prisma.serviceChecklistItem.findMany({
+        where: { serviceId: input.serviceId },
+        orderBy: { orderIndex: "asc" },
+        select: { text: true },
       });
-    }
-  } else if (input.serviceId) {
-    const template = await prisma.serviceChecklistItem.findMany({
-      where: { serviceId: input.serviceId },
-      orderBy: { orderIndex: "asc" },
-      select: { text: true },
-    });
-    if (template.length) {
-      await prisma.checklistItem.createMany({
-        data: template.map((c, i) => ({ taskId: task.id, text: c.text, orderIndex: i })),
-      });
+      if (template.length) {
+        await prisma.checklistItem.createMany({
+          data: template.map((c, i) => ({ taskId: task.id, text: c.text, orderIndex: i, createdById: session.userId })),
+        });
+      }
     }
   }
 
@@ -596,6 +602,7 @@ export async function duplicateTask(
       serviceId: true,
       priority: true,
       dueDate: true,
+      checklistEnabled: true,
       checklist: { orderBy: { orderIndex: "asc" }, select: { text: true } },
       assignees: { select: { employeeId: true } },
     },
@@ -612,6 +619,7 @@ export async function duplicateTask(
       status: "TODO",
       priority: src.priority,
       dueDate: src.dueDate,
+      checklistEnabled: src.checklistEnabled,
       assignees: src.assignees.length
         ? { create: src.assignees.map((a) => ({ employeeId: a.employeeId })) }
         : undefined,
@@ -620,7 +628,7 @@ export async function duplicateTask(
   });
   if (src.checklist.length) {
     await prisma.checklistItem.createMany({
-      data: src.checklist.map((c, i) => ({ taskId: copy.id, text: c.text, orderIndex: i })),
+      data: src.checklist.map((c, i) => ({ taskId: copy.id, text: c.text, orderIndex: i, createdById: session.userId })),
     });
   }
   revalidatePath("/tasks");
@@ -705,7 +713,7 @@ export async function addChecklistItem(
   if (!(await canEditTask(session, taskId))) return { error: "No access to this task" };
   const count = await prisma.checklistItem.count({ where: { taskId } });
   const item = await prisma.checklistItem.create({
-    data: { taskId, text: t, orderIndex: count },
+    data: { taskId, text: t, orderIndex: count, createdById: session.userId },
     select: { id: true, text: true, isDone: true },
   });
   await logTaskActivity(session, taskId, `added checklist item '${t}'`);
@@ -718,10 +726,17 @@ export async function removeChecklistItem(itemId: string): Promise<ProjectState>
   if (!session) return { error: "Not authenticated" };
   const item = await prisma.checklistItem.findFirst({
     where: { id: itemId, task: { project: { companyId: session.companyId } } },
-    select: { taskId: true, text: true },
+    select: { taskId: true, text: true, createdById: true, task: { select: { createdById: true } } },
   });
   if (!item) return { error: "Item not found" };
   if (!(await canEditTask(session, item.taskId))) return { error: "No access" };
+  // Only the task creator can remove items from the task's original list; anyone
+  // else can remove only the items they added themselves.
+  const isTaskCreator = session.userId === item.task.createdById;
+  const isOwnItem = !!item.createdById && item.createdById === session.userId;
+  if (!isTaskCreator && !isOwnItem) {
+    return { error: "Only the person who created this task can remove its original checklist items." };
+  }
   await prisma.checklistItem.delete({ where: { id: itemId } });
   await logTaskActivity(session, item.taskId, `removed checklist item '${item.text}'`);
   revalidatePath(`/tasks/${item.taskId}`);

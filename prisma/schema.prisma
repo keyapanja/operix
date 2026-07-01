@@ -559,6 +559,7 @@ model Task {
   clientDeadline DateTime? // client-facing deadline; the due date is auto-set a day before
   priority     Priority   @default(MEDIUM)
   status       TaskStatus @default(TODO)
+  checklistEnabled Boolean @default(true) // false = created "without a checklist"; detail page hides the box
   startedAt    DateTime? // first moved to In Progress
   completedAt  DateTime? // moved to Completed
   orderIndex   Int        @default(0)
@@ -656,6 +657,7 @@ model ChecklistItem {
   text      String
   isDone    Boolean @default(false)
   orderIndex Int    @default(0)
+  createdById String? // userId who added it; creation-time items carry the task creator's id
 
   task Task @relation(fields: [taskId], references: [id])
 

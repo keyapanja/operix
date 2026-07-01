@@ -46,6 +46,7 @@ export default async function TaskDetailPage({
       priority: true,
       serviceId: true,
       createdById: true,
+      checklistEnabled: true,
       finalLink: true,
       dueDate: true,
       clientDeadline: true,
@@ -71,7 +72,7 @@ export default async function TaskDetailPage({
       },
       service: { select: { name: true } },
       assignees: { select: { employee: { select: { id: true, fullName: true } } } },
-      checklist: { orderBy: { orderIndex: "asc" }, select: { id: true, text: true, isDone: true } },
+      checklist: { orderBy: { orderIndex: "asc" }, select: { id: true, text: true, isDone: true, createdById: true } },
       attachments: {
         orderBy: { createdAt: "desc" },
         select: { id: true, fileName: true, mimeType: true, sizeBytes: true, createdAt: true },
@@ -89,6 +90,15 @@ export default async function TaskDetailPage({
   // Editing (meta, checklist, attachments, assignees) is limited to the assigner
   // (creator), the assignees, or a Super Admin (org-wide override).
   const canEdit = isReviewer || isAssignee || session.role === "SUPER_ADMIN";
+
+  // Only the task creator can delete the original (creation-time) checklist
+  // items; anyone editing can delete only the items they added themselves.
+  const checklistItems = task.checklist.map((it) => ({
+    id: it.id,
+    text: it.text,
+    isDone: it.isDone,
+    canDelete: isReviewer || (!!it.createdById && it.createdById === session.userId),
+  }));
 
   // Review-flow roles. Base employees hold task:manage, so submit/review overrides
   // use an elevated capability (project:manage), not isManager.
@@ -226,14 +236,16 @@ export default async function TaskDetailPage({
         {/* Main column — Workflow stays on top on mobile, but sits after the
             Checklist in the 2-column (lg) layout via responsive order. */}
         <div className="flex flex-col gap-5 lg:col-span-2">
-          <Card className="order-2 lg:order-1">
-            <div className="border-b border-line px-5 py-3">
-              <h3 className="text-sm font-semibold text-content">Checklist</h3>
-            </div>
-            <div className="p-5">
-              <TaskChecklist taskId={task.id} canEdit={canEdit} initial={task.checklist} />
-            </div>
-          </Card>
+          {task.checklistEnabled && (
+            <Card className="order-2 lg:order-1">
+              <div className="border-b border-line px-5 py-3">
+                <h3 className="text-sm font-semibold text-content">Checklist</h3>
+              </div>
+              <div className="p-5">
+                <TaskChecklist taskId={task.id} canEdit={canEdit} initial={checklistItems} />
+              </div>
+            </Card>
+          )}
 
           {/* Review workflow — submit / review / approve */}
           <Card className="order-1 p-5 lg:order-2">
