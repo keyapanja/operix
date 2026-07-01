@@ -56,7 +56,11 @@ export type FieldDef = {
   width?: "full" | "half";
 };
 
-export type FormSchema = { fields: FieldDef[] };
+export type FormSchema = {
+  fields: FieldDef[];
+  /** Default entries grouping the builder set: "" (none), "__submitter", or a field id. */
+  defaultGroupBy?: string;
+};
 
 // ---- Value model ----------------------------------------------------------
 export type ScalarValue = string | string[] | boolean | undefined;
@@ -188,7 +192,10 @@ const FieldDefZ: z.ZodType<FieldDef> = z.lazy(() =>
   }),
 );
 
-export const FormSchemaZ = z.object({ fields: z.array(FieldDefZ).max(200) });
+export const FormSchemaZ = z.object({
+  fields: z.array(FieldDefZ).max(200),
+  defaultGroupBy: z.string().max(40).optional(),
+});
 
 /** Parse a stored Form.schema Json into a typed FormSchema (never throws). */
 export function parseSchema(json: unknown): FormSchema {

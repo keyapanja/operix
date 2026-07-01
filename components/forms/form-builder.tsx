@@ -20,6 +20,7 @@ import { updateForm } from "@/lib/forms/actions";
 import {
   FIELD_CATALOG,
   fieldMeta,
+  isInputField,
   makeField,
   type FieldDef,
   type FieldMeta,
@@ -42,7 +43,7 @@ type Initial = {
   title: string;
   description: string | null;
   status: "DRAFT" | "PUBLISHED" | "CLOSED";
-  schema: { fields: FieldDef[] };
+  schema: { fields: FieldDef[]; defaultGroupBy?: string };
   audienceRoles: string[];
   viewAllRoles: string[];
   portalEnabled: boolean;
@@ -128,6 +129,7 @@ export function FormBuilder({ initial }: { initial: Initial }) {
   const [viewAllRoles, setViewAllRoles] = useState<string[]>(initial.viewAllRoles);
   const [portalEnabled, setPortalEnabled] = useState(initial.portalEnabled);
   const [allowMultiple, setAllowMultiple] = useState(initial.allowMultiple);
+  const [defaultGroupBy, setDefaultGroupBy] = useState(initial.schema.defaultGroupBy ?? "");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rightTab, setRightTab] = useState<"field" | "settings">("settings");
@@ -200,7 +202,7 @@ export function FormBuilder({ initial }: { initial: Initial }) {
         id: initial.id,
         title: title.trim(),
         description: description.trim() || null,
-        schema: { fields },
+        schema: { fields, defaultGroupBy: defaultGroupBy || undefined },
         audienceRoles,
         viewAllRoles,
         portalEnabled,
@@ -217,6 +219,11 @@ export function FormBuilder({ initial }: { initial: Initial }) {
   }
 
   const overlayMeta = activeId?.startsWith("palette:") ? fieldMeta(activeId.slice(8) as FieldType) : null;
+  const groupChoices = [
+    { value: "", label: "No grouping" },
+    { value: "__submitter", label: "Submitter" },
+    ...fields.filter((f) => isInputField(f.type)).map((f) => ({ value: f.id, label: f.label || "(untitled)" })),
+  ];
 
   return (
     <div>
@@ -316,6 +323,11 @@ export function FormBuilder({ initial }: { initial: Initial }) {
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-muted">Status</span>
                   <Combobox value={status} onChange={(v) => setStatus(v as Initial["status"])} options={STATUS_OPTS} />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-muted">Default entries grouping</span>
+                  <Combobox value={defaultGroupBy} onChange={setDefaultGroupBy} options={groupChoices} />
+                  <span className="mt-1 block text-xs text-muted">How the entries table groups by default — viewers can still change it.</span>
                 </label>
 
                 <div className="border-t border-line pt-3">

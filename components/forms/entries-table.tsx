@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteSubmission } from "@/lib/forms/actions";
 import { answerToText, isInputField, type FieldDef, type Lookups } from "@/lib/forms/types";
@@ -36,30 +36,55 @@ function csvCell(v: string): string {
 }
 
 export function EntriesTable({
+  formId,
   formTitle,
   fields,
   rows,
   canDeleteAny,
   showSubmitter,
   lookups,
+  defaultGroupBy,
 }: {
+  formId: string;
   formTitle: string;
   fields: FieldDef[];
   rows: Row[];
   canDeleteAny: boolean;
   showSubmitter: boolean;
   lookups?: Lookups;
+  defaultGroupBy?: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [q, setQ] = useState("");
   const [sortKey, setSortKey] = useState("__date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [groupKey, setGroupKey] = useState("");
+  const [groupKey, setGroupKey] = useState(defaultGroupBy ?? "");
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(0);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [view, setView] = useState<Row | null>(null);
+
+  // The viewer's own grouping choice persists (per form, per device) and wins
+  // over the form's default. "" is a valid saved value (they chose No grouping).
+  const storeKey = `oprix:entries-group:${formId}`;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storeKey);
+      if (saved !== null) setGroupKey(saved);
+    } catch {
+      /* ignore */
+    }
+  }, [storeKey]);
+  function setGroup(v: string) {
+    setGroupKey(v);
+    setPage(0);
+    try {
+      localStorage.setItem(storeKey, v);
+    } catch {
+      /* ignore */
+    }
+  }
 
   const inputCols = useMemo(() => fields.filter((f) => isInputField(f.type)), [fields]);
 
@@ -103,19 +128,26 @@ export function EntriesTable({
     return opts;
   }, [inputCols, showSubmitter]);
 
+  // A saved/default group key that no longer matches a column (deleted field, or
+  // submitter grouping for an own-only viewer) falls back to no grouping.
+  const effectiveGroup = useMemo(
+    () => (groupOptions.some((o) => o.value === groupKey) ? groupKey : ""),
+    [groupOptions, groupKey],
+  );
+
   const groups = useMemo(() => {
-    if (!groupKey) return [] as [string, Row[]][];
-    const col = cols.find((c) => c.key === groupKey);
+    if (!effectiveGroup) return [] as [string, Row[]][];
+    const col = cols.find((c) => c.key === effectiveGroup);
     const m = new Map<string, Row[]>();
     for (const r of sorted) {
       const key = (col ? col.display(r) : "") || "—";
       (m.get(key) ?? m.set(key, []).get(key)!).push(r);
     }
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [groupKey, sorted, cols]);
+  }, [effectiveGroup, sorted, cols]);
 
   // When grouped by a column, don't repeat that column inside each group's rows.
-  const groupedCols = useMemo(() => cols.filter((c) => c.key !== groupKey), [cols, groupKey]);
+  const groupedCols = useMemo(() => cols.filter((c) => c.key !== effectiveGroup), [cols, effectiveGroup]);
 
   const total = sorted.length;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -227,9 +259,9 @@ export function EntriesTable({
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search entries…" />
           </div>
           <div className="w-44">
-            <Combobox value={groupKey} onChange={(v) => { setGroupKey(v); setPage(0); }} options={groupOptions} placeholder="Group by…" />
+            <Combobox value={effectiveGroup} onChange={setGroup} options={groupOptions} placeholder="Group by…" />
           </div>
-          {!groupKey && (
+          {!effectiveGroup && (
             <div className="w-32">
               <Combobox
                 value={String(pageSize)}
@@ -250,7 +282,7 @@ export function EntriesTable({
 
       {total === 0 ? (
         <p className="px-5 py-16 text-center text-sm text-muted">No entries here.</p>
-      ) : groupKey ? (
+      ) : effectiveGroup ? (
         <div className="divide-y divide-line">
           {groups.map(([gval, grows]) => {
             const open = !collapsed.has(gval);

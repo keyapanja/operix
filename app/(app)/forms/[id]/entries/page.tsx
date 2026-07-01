@@ -27,12 +27,14 @@ export default async function FormEntriesPage({ params }: { params: Promise<{ id
         description={data.canViewAll ? "All responses to this form." : "Your responses to this form."}
       />
       <EntriesTable
+        formId={data.form.id}
         formTitle={data.form.title}
         fields={data.form.schema.fields}
         rows={data.rows}
         canDeleteAny={data.canManage}
         showSubmitter={data.canViewAll}
         lookups={lookups}
+        defaultGroupBy={data.form.schema.defaultGroupBy ?? ""}
       />
     </div>
   );
