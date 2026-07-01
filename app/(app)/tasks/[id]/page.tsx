@@ -159,7 +159,7 @@ export default async function TaskDetailPage({
     <div className="mx-auto max-w-6xl">
       <LiveRefresh seconds={10} />
       <div className="mb-3">
-        <BackLink href={`/projects/${task.project.id}`}>{task.project.name}</BackLink>
+        <BackLink href="/tasks">Back</BackLink>
       </div>
 
       {/* Compact header */}
