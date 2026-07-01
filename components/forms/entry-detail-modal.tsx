@@ -43,6 +43,20 @@ function ViewValue({ field, value }: { field: FieldDef; value: unknown }) {
       </div>
     );
   }
+  if (field.type === "list") {
+    const items = Array.isArray(value) ? (value as unknown[]).filter((x) => typeof x === "string" && x.trim() !== "") : [];
+    if (items.length === 0) return <span className="text-sm text-muted">—</span>;
+    return (
+      <ul className="list-disc space-y-0.5 pl-5 text-sm text-content">
+        {items.map((it, i) => (
+          <li key={i} className="break-words">
+            {String(it)}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   const text = answerToText(field, value);
   return <span className="whitespace-pre-wrap break-words text-sm text-content">{text || "—"}</span>;
 }
