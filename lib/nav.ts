@@ -8,6 +8,9 @@ export type NavChild = {
   icon?: string;
   /** Capability required to see this shortcut (the create page's own gate). */
   action?: Action;
+  /** Only show when the signed-in user is linked to an employee profile
+   *  (self-service actions like applying for leave need one). */
+  employeeOnly?: boolean;
 };
 
 export type NavItem = {
@@ -99,7 +102,7 @@ export const NAV: NavItem[] = [
     icon: "calendar",
     action: "self:service",
     children: [
-      { label: "Apply for leave", href: "/leave/apply", action: "self:service" },
+      { label: "Apply for leave", href: "/leave/apply", action: "self:service", employeeOnly: true },
       { label: "All requests", href: "/leave/requests", icon: "calendarDays", action: "leave:manage" },
     ],
   },

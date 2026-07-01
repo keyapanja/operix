@@ -13,10 +13,12 @@ const EXPANDED_KEY = "oprix:sidebar:expanded";
 export function Sidebar({
   allowed,
   isSuperAdmin,
+  isEmployee,
   company,
 }: {
   allowed: string[];
   isSuperAdmin: boolean;
+  isEmployee: boolean;
   company: { name: string; tagline: string | null; logoUrl: string | null };
 }) {
   const pathname = usePathname();
@@ -122,7 +124,9 @@ export function Sidebar({
         )}
         {items.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/");
-          const children = (item.children ?? []).filter((c) => !c.action || allowed.includes(c.action));
+          const children = (item.children ?? []).filter(
+            (c) => (!c.action || allowed.includes(c.action)) && (!c.employeeOnly || isEmployee),
+          );
           const hasChildren = children.length > 0;
           const open = !collapsed && hasChildren && isOpen(item.href, active);
           return (

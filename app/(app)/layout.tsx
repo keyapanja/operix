@@ -80,6 +80,7 @@ export default async function AppLayout({
       <Sidebar
         allowed={allowed}
         isSuperAdmin={session.role === "SUPER_ADMIN"}
+        isEmployee={!!session.employeeId}
         company={{
           name: company?.name ?? "Oprix",
           tagline: company?.tagline || company?.businessType || null,
