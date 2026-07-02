@@ -78,7 +78,7 @@ export async function requestChanges(taskId: string): Promise<WorkflowState> {
   }
 
   await finalizeTaskTimer(session.companyId, session.userId, taskId);
-  await prisma.task.update({ where: { id: taskId }, data: { status: "REDO", finalLink: null } });
+  await prisma.task.update({ where: { id: taskId }, data: { status: "REDO", finalLink: null, submittedAt: null } });
 
   const actor = await actorLabel(session.userId);
   await logTaskActivity(
@@ -154,7 +154,7 @@ export async function withdrawSubmission(taskId: string): Promise<WorkflowState>
 
   await prisma.task.update({
     where: { id: taskId },
-    data: { status: "IN_PROGRESS", finalLink: null },
+    data: { status: "IN_PROGRESS", finalLink: null, submittedAt: null },
   });
 
   const actor = await actorLabel(session.userId);

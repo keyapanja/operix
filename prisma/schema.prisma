@@ -566,6 +566,7 @@ model Task {
   status       TaskStatus @default(TODO)
   checklistEnabled Boolean @default(true) // false = created "without a checklist"; detail page hides the box
   startedAt    DateTime? // first moved to In Progress
+  submittedAt  DateTime? // when the current work was submitted for review (for on-time/delayed)
   completedAt  DateTime? // moved to Completed
   orderIndex   Int        @default(0)
   deletedAt    DateTime?

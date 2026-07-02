@@ -46,7 +46,10 @@ export async function submitForReviewFor(
   const value = looksLikeUrl(raw) ? (normalizeHttpUrl(raw) ?? raw.slice(0, 1000)) : raw.slice(0, 1000);
 
   await finalizeAllTaskTimers(session.companyId, taskId);
-  await prisma.task.update({ where: { id: taskId }, data: { status: "REVIEW", finalLink: value } });
+  await prisma.task.update({
+    where: { id: taskId },
+    data: { status: "REVIEW", finalLink: value, submittedAt: new Date() },
+  });
 
   const actor = await actorLabel(session.userId);
   if (task.createdById && task.createdById !== session.userId) {

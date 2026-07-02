@@ -223,8 +223,7 @@ export function ApplyForm({
 
         {requestedDays > 0 && (
           <p className="text-xs font-medium text-accent-strong">
-            {requestedDays} day{requestedDays === 1 ? "" : "s"}
-            {workWeek ? " · weekly offs & holidays excluded" : ""}
+            {requestedDays} {workWeek ? "working " : ""}day{requestedDays === 1 ? "" : "s"}
           </p>
         )}
         {noWorkingDays && (

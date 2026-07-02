@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icons";
 import { humanizeEnum, formatDate, formatDateTime } from "@/lib/format";
-import { BackdateBadge } from "@/components/ui/backdate-badge";
 import { PRIORITY_TONE, TASK_STATUS_TONE, TASK_STATUS_LABEL } from "@/lib/status";
 import { TaskAssignees } from "@/components/tasks/task-assignees";
 import { TaskChecklist } from "@/components/tasks/task-checklist";
@@ -19,6 +18,7 @@ import { TaskEdit } from "@/components/tasks/task-edit";
 import { TaskDuplicate } from "@/components/tasks/task-duplicate";
 import { TaskStatusEditor } from "@/components/tasks/task-status-editor";
 import { TaskWorkflow } from "@/components/tasks/task-workflow";
+import { TaskDueBadge } from "@/components/tasks/task-due-badge";
 import { CommentForm } from "@/components/tasks/comment-form";
 import { CommentItem } from "@/components/tasks/comment-item";
 import { TaskTimerControl } from "@/components/timer/task-timer-control";
@@ -54,6 +54,7 @@ export default async function TaskDetailPage({
       clientDeadline: true,
       createdAt: true,
       startedAt: true,
+      submittedAt: true,
       completedAt: true,
       project: {
         select: {
@@ -107,6 +108,12 @@ export default async function TaskDetailPage({
   const isElevated = await hasPermission(session.companyId, session.role, "project:manage");
   const canSubmit = isAssignee || isElevated; // worker side
   const canReview = isReviewer || isElevated; // creator side
+
+  // Due-date timeliness: use the submission time when submitted (fall back to
+  // completion for legacy rows), else flag "Delayed" once an active task is overdue.
+  const submittedDate = task.submittedAt ?? (task.status === "COMPLETED" ? task.completedAt : null);
+  const submitISO = submittedDate ? submittedDate.toISOString().slice(0, 10) : null;
+  const duePending = task.status === "TODO" || task.status === "IN_PROGRESS" || task.status === "REDO";
   const canTime = canUseTimer(task.status, isAssignee, isReviewer);
   const lockedReason =
     task.status === "COMPLETED"
@@ -227,17 +234,12 @@ export default async function TaskDetailPage({
             </span>
           )}
           {task.dueDate && (
-            <span className="inline-flex items-center gap-1.5">
-              <Icon name="calendar" className="size-4 text-faint" />
-              <span className="text-faint">Due</span>
-              <span className="font-medium text-content">{formatDate(task.dueDate)}</span>
-              {task.status !== "HOLD" && (
-                <BackdateBadge
-                  date={(task.clientDeadline ?? task.dueDate).toISOString()}
-                  assignedDate={task.createdAt.toISOString()}
-                />
-              )}
-            </span>
+            <TaskDueBadge
+              dueISO={task.dueDate.toISOString().slice(0, 10)}
+              dueLabel={formatDate(task.dueDate)}
+              submitISO={submitISO}
+              pending={duePending}
+            />
           )}
           {task.clientDeadline && (
             <span className="inline-flex items-center gap-1.5">
