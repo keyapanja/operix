@@ -67,7 +67,7 @@ export function PushToggle() {
     <button
       onClick={enabled ? disable : enable}
       disabled={busy}
-      className="inline-flex items-center gap-2 rounded-xl bg-canvas px-3 py-2 text-sm font-medium text-content ring-1 ring-inset ring-line transition-colors hover:bg-surface disabled:opacity-50"
+      className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-canvas px-3 py-2 text-sm font-medium text-content ring-1 ring-inset ring-line transition-colors hover:bg-surface disabled:opacity-50"
     >
       <Icon name="bell" className="size-4" />
       {busy ? "Working…" : enabled ? "Disable push on this device" : "Enable push notifications"}
