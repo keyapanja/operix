@@ -148,6 +148,9 @@ model Company {
   phone              String?
   employeeCodePrefix String   @default("EMP")
   multiLocation      Boolean  @default(false)
+  // Working-days config used for leave-day counting: { workingWeekdays:[0..6],
+  // saturdayOffWeeks:[1..5] }. null = default (Mon–Sat working, Sunday off).
+  workWeek           Json?
   // Payroll: which statutory deductions this company is registered for. When a
   // component is off, it's skipped at payroll time (e.g. small firms with no
   // PF/ESI registration → Basic can be the full net pay).

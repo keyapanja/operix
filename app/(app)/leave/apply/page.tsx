@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { requirePage } from "@/lib/auth/guard";
 import { computeBalances } from "@/lib/leave/balance";
+import { getWorkWeek } from "@/lib/leave/count";
+import { prisma } from "@/lib/db";
 import { BackLink } from "@/components/ui/back-link";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
@@ -22,7 +24,15 @@ export default async function ApplyLeavePage() {
     );
   }
 
-  const balances = await computeBalances(session.companyId, session.employeeId);
+  const [balances, workWeek, holidayRows] = await Promise.all([
+    computeBalances(session.companyId, session.employeeId),
+    getWorkWeek(session.companyId),
+    prisma.holiday.findMany({
+      where: { companyId: session.companyId, deletedAt: null },
+      select: { date: true },
+    }),
+  ]);
+  const holidays = holidayRows.map((h) => h.date.toISOString().slice(0, 10));
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -41,6 +51,8 @@ export default async function ApplyLeavePage() {
           used: b.used,
           attachmentEnabled: b.attachmentEnabled,
         }))}
+        workWeek={workWeek}
+        holidays={holidays}
       />
     </div>
   );

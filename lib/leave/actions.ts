@@ -8,6 +8,9 @@ import { requireCapability } from "@/lib/auth/guard";
 import { getSession } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/permissions";
 import { remainingForType } from "@/lib/leave/balance";
+import { countLeaveDays } from "@/lib/leave/count";
+import { parseWorkWeek } from "@/lib/leave/work-week";
+import { deleteUpload } from "@/lib/uploads";
 import { dateAtUTC } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
 import { notify } from "@/lib/notifications/notify";
@@ -166,9 +169,12 @@ export async function applyLeave(
 
   const singleDay = d.startDate === d.endDate;
   const isHalfDay = singleDay && d.isHalfDay === "on";
-  const days = isHalfDay
-    ? 0.5
-    : Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  // Only working days count — weekly offs, nth-Saturday rules, and holidays in
+  // the span are excluded automatically.
+  const days = await countLeaveDays(session.companyId, start, end, isHalfDay);
+  if (days <= 0) {
+    return { error: "Those dates are all non-working days (weekly offs or holidays)." };
+  }
 
   let leaveTypeId: string | null = null;
   if (d.kind === "LEAVE") {
@@ -267,7 +273,10 @@ export async function createLeaveRequest(
   if (end < start) return { error: "End date can't be before the start date" };
   const half = d.isHalfDay === "true";
   if (half && d.startDate !== d.endDate) return { error: "Half-day leave must be on a single day." };
-  const days = half ? 0.5 : Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  const days = await countLeaveDays(session.companyId, start, end, half);
+  if (days <= 0) {
+    return { error: "Those dates are all non-working days (weekly offs or holidays)." };
+  }
 
   // Enforce the same balance + overlap guards as self-service apply.
   const remaining = await remainingForType(session.companyId, d.employeeId, d.leaveTypeId);
@@ -407,13 +416,18 @@ export async function requestLeaveEdit(_prev: LeaveState, formData: FormData): P
 
   const req = await prisma.leaveRequest.findFirst({
     where: { id, companyId: session.companyId },
-    select: { id: true, kind: true, employeeId: true },
+    select: { id: true, kind: true, employeeId: true, status: true },
   });
   if (!req) return { error: "Request not found" };
 
   // Only the person who applied may request an edit; managers approve/reject it.
   const isOwner = !!session.employeeId && session.employeeId === req.employeeId;
   if (!isOwner) return { error: "Only the person who applied can request an edit." };
+  // Once decided (approved or rejected), the applicant can no longer change it —
+  // only an authorized approver can edit or delete it after that.
+  if (req.status !== "PENDING") {
+    return { error: "This request has already been decided and can no longer be edited." };
+  }
 
   const parsed = EditSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -426,7 +440,8 @@ export async function requestLeaveEdit(_prev: LeaveState, formData: FormData): P
 
   const singleDay = d.startDate === d.endDate;
   const isHalfDay = singleDay && d.isHalfDay === "on";
-  const days = isHalfDay ? 0.5 : Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  const days = await countLeaveDays(session.companyId, start, end, isHalfDay);
+  if (days <= 0) return { error: "Those dates are all non-working days (weekly offs or holidays)." };
 
   const pendingEdit: PendingEdit = {
     startDate: d.startDate,
@@ -569,7 +584,8 @@ export async function adminEditLeave(_prev: LeaveState, formData: FormData): Pro
 
   const singleDay = d.startDate === d.endDate;
   const isHalfDay = singleDay && d.isHalfDay === "on";
-  const days = isHalfDay ? 0.5 : Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  const days = await countLeaveDays(session.companyId, start, end, isHalfDay);
+  if (days <= 0) return { error: "Those dates are all non-working days (weekly offs or holidays)." };
   const decided = d.status === "HR_APPROVED" || d.status === "REJECTED";
 
   await prisma.leaveRequest.update({
@@ -605,5 +621,60 @@ export async function adminEditLeave(_prev: LeaveState, formData: FormData): Pro
 
   revalidatePath(LEAVE);
   revalidatePath("/leave/requests");
+  return { ok: true };
+}
+
+/**
+ * Permanently delete a leave/WFH request. Restricted to people who can approve
+ * leave (approvers / Super Admin) — the applicant can never delete their own.
+ * Any attachments (rows + files on disk) are removed too.
+ */
+export async function deleteLeaveRequest(id: string): Promise<LeaveState> {
+  const session = await requireCapability("leave:approve");
+  const req = await prisma.leaveRequest.findFirst({
+    where: { id, companyId: session.companyId },
+    select: { id: true, attachments: { select: { id: true, fileKey: true } } },
+  });
+  if (!req) return { error: "Request not found" };
+
+  // No cascade on the FK — delete attachment rows first, then their files.
+  if (req.attachments.length) {
+    await prisma.attachment.deleteMany({ where: { leaveRequestId: id } });
+    for (const a of req.attachments) {
+      if (a.fileKey) await deleteUpload(a.fileKey).catch(() => {});
+    }
+  }
+  await prisma.leaveRequest.delete({ where: { id } });
+
+  revalidatePath(LEAVE);
+  revalidatePath("/leave/requests");
+  return { ok: true };
+}
+
+// ---- Working-days configuration (company-level) ---------------------------
+const WorkWeekSchema = z.object({
+  workingWeekdays: z.array(z.number().int().min(0).max(6)),
+  saturdayOffWeeks: z.array(z.number().int().min(1).max(5)),
+});
+
+/**
+ * Save the company's working-days config used for leave-day counting (which
+ * weekdays are working, plus which nth-Saturdays are off). Org-level setting,
+ * gated by `org:manage` (Super Admin / configured roles).
+ */
+export async function setWorkWeek(input: {
+  workingWeekdays: number[];
+  saturdayOffWeeks: number[];
+}): Promise<LeaveState> {
+  const session = await requireCapability("org:manage");
+  const parsed = WorkWeekSchema.safeParse(input);
+  if (!parsed.success) return { error: "Invalid working-days configuration." };
+  const clean = parseWorkWeek(parsed.data); // normalize (dedupe, sort, bound)
+  await prisma.company.update({
+    where: { id: session.companyId },
+    data: { workWeek: clean },
+  });
+  revalidatePath("/organization");
+  revalidatePath("/leave");
   return { ok: true };
 }

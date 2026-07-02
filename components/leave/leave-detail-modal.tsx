@@ -8,10 +8,12 @@ import {
   adminEditLeave,
   approveLeaveEdit,
   rejectLeaveEdit,
+  deleteLeaveRequest,
   type LeaveState,
 } from "@/lib/leave/actions";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icons";
 import { Badge } from "@/components/ui/badge";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
@@ -115,6 +117,25 @@ export function LeaveDetailModal({
         toast.error(res.error);
       } else {
         toast.success("Change rejected");
+        router.refresh();
+        onClose();
+      }
+    });
+  }
+
+  async function onDelete() {
+    const ok = await confirmDialog({
+      message: "Delete this leave request permanently? This can't be undone.",
+      tone: "danger",
+      confirmLabel: "Delete",
+    });
+    if (!ok) return;
+    startTx(async () => {
+      const res = await deleteLeaveRequest(req.id);
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Leave request deleted");
         router.refresh();
         onClose();
       }
@@ -234,9 +255,19 @@ export function LeaveDetailModal({
           </div>
         )}
 
-        {/* Approver / Super Admin — edit the request directly (details + status) */}
+        {/* Approver / Super Admin — edit the request directly, or delete it */}
         {!req.pendingEdit && canApprove && !editing && (
-          <div className="flex justify-end border-t border-line pt-3">
+          <div className="flex items-center justify-between gap-2 border-t border-line pt-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={pending}
+              onClick={onDelete}
+              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-500/15"
+            >
+              <Icon name="trash" className="size-4" />
+              Delete
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
               Edit request
             </Button>
@@ -311,8 +342,8 @@ export function LeaveDetailModal({
           </form>
         )}
 
-        {/* Applicant — propose a change for an approver to apply */}
-        {!req.pendingEdit && canEdit && !canApprove && !editing && (
+        {/* Applicant — propose a change (only while the request is still pending) */}
+        {!req.pendingEdit && canEdit && !canApprove && req.status === "PENDING" && !editing && (
           <div className="flex justify-end border-t border-line pt-3">
             <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
               Request edit
@@ -320,7 +351,14 @@ export function LeaveDetailModal({
           </div>
         )}
 
-        {!req.pendingEdit && canEdit && !canApprove && editing && (
+        {/* Once decided, the applicant can no longer change anything. */}
+        {!req.pendingEdit && canEdit && !canApprove && req.status !== "PENDING" && (
+          <p className="border-t border-line pt-3 text-xs text-muted">
+            This request has been {req.status === "REJECTED" ? "rejected" : "approved"} and can no longer be edited.
+          </p>
+        )}
+
+        {!req.pendingEdit && canEdit && !canApprove && req.status === "PENDING" && editing && (
           <form action={formAction} className="space-y-3 border-t border-line pt-3">
             <p className="text-xs text-muted">
               Propose a change — it won&apos;t take effect until an approver accepts it.

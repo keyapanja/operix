@@ -16,6 +16,8 @@ import { ServiceList } from "@/components/org/service-list";
 import { PermissionsMatrix } from "@/components/org/permissions-matrix";
 import { TaskScopeMatrix } from "@/components/org/task-scope-matrix";
 import { AdminsPanel } from "@/components/org/admins-panel";
+import { WorkingDaysSettings } from "@/components/org/working-days-settings";
+import type { WorkWeek } from "@/lib/leave/work-week";
 import { CompanyInfoForm, type CompanyInfo } from "@/components/org/company-info-form";
 import { DepartmentHead } from "@/components/org/department-head";
 import { BulkSubcategoryForm } from "@/components/org/bulk-subcategory-form";
@@ -58,6 +60,7 @@ export function OrgTabs({
   probationPeriods,
   multiLocation,
   eventReminder,
+  workWeek,
   accessMatrix,
   taskScopes,
   admins,
@@ -73,6 +76,7 @@ export function OrgTabs({
   probationPeriods: Prob[];
   multiLocation: boolean;
   eventReminder: { enabled: boolean; time: string };
+  workWeek: WorkWeek;
   accessMatrix: Record<string, string[]> | null;
   taskScopes: Record<string, string> | null;
   admins: { userId: string; name: string; email: string; isPrimary: boolean; isSelf: boolean }[] | null;
@@ -181,6 +185,11 @@ export function OrgTabs({
           <div>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-faint">Reminders</h3>
             <EventReminderSettings enabled={eventReminder.enabled} time={eventReminder.time} />
+          </div>
+
+          <div>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-faint">Leave</h3>
+            <WorkingDaysSettings initial={workWeek} />
           </div>
           </div>
         </div>

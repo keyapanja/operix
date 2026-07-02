@@ -11,6 +11,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Icon } from "@/components/ui/icons";
 import { toast } from "@/components/ui/toast";
 import { FilePreviewGrid, makePicked, type PickedFile } from "@/components/attachments/file-preview-grid";
+import { countWorkingDays, type WorkWeek } from "@/lib/leave/work-week";
 import { cn } from "@/lib/cn";
 
 type Balance = {
@@ -31,12 +32,17 @@ export function ApplyForm({
   initialEnd = "",
   bare = false,
   onDone,
+  workWeek,
+  holidays,
 }: {
   balances: Balance[];
   initialStart?: string;
   initialEnd?: string;
   bare?: boolean;
   onDone?: () => void;
+  /** When provided, the day count excludes weekly offs, nth-Saturdays & holidays. */
+  workWeek?: WorkWeek;
+  holidays?: string[];
 }) {
   const [resetKey, setResetKey] = useState(0);
   const [kind, setKind] = useState<"LEAVE" | "WFH">("LEAVE");
@@ -52,14 +58,17 @@ export function ApplyForm({
   const singleDay = !!start && start === end;
   const selected = useMemo(() => balances.find((b) => b.typeId === typeId), [balances, typeId]);
 
+  const holidaySet = useMemo(() => new Set(holidays ?? []), [holidays]);
   const requestedDays = useMemo(() => {
-    if (!start || !end) return 0;
-    const s = Date.parse(start);
-    const e = Date.parse(end);
-    if (Number.isNaN(s) || Number.isNaN(e) || e < s) return 0;
+    if (!start || !end || start > end) return 0;
+    if (workWeek) return countWorkingDays(start, end, workWeek, holidaySet, singleDay && half);
+    // Fallback (no work-week passed): naive inclusive count.
     if (singleDay && half) return 0.5;
-    return Math.round((e - s) / 86_400_000) + 1;
-  }, [start, end, singleDay, half]);
+    return Math.round((Date.parse(end) - Date.parse(start)) / 86_400_000) + 1;
+  }, [start, end, singleDay, half, workWeek, holidaySet]);
+
+  // The whole span is weekends/holidays — nothing to count (server rejects it too).
+  const noWorkingDays = !!start && !!end && start <= end && requestedDays === 0;
 
   const periodWord = selected?.period === "MONTH" ? "month" : "year";
   // Unlimited types have no fixed cap, so they're never exhausted / over balance.
@@ -71,7 +80,7 @@ export function ApplyForm({
     !selected.unlimited &&
     requestedDays > 0 &&
     requestedDays > selected.remaining;
-  const blocked = exhausted || overBalance;
+  const blocked = exhausted || overBalance || noWorkingDays;
   const showAttachment = kind === "LEAVE" && !!selected?.attachmentEnabled;
 
   function onFilesPicked(e: ChangeEvent<HTMLInputElement>) {
@@ -210,6 +219,18 @@ export function ApplyForm({
             />
             Half day
           </label>
+        )}
+
+        {requestedDays > 0 && (
+          <p className="text-xs font-medium text-accent-strong">
+            {requestedDays} day{requestedDays === 1 ? "" : "s"}
+            {workWeek ? " · weekly offs & holidays excluded" : ""}
+          </p>
+        )}
+        {noWorkingDays && (
+          <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+            These dates are all non-working days (weekly offs or holidays) — nothing to count.
+          </p>
         )}
 
         <Field label="Reason" htmlFor="apply-reason">

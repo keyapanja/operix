@@ -4,6 +4,7 @@ import { hasPermission, getAccessMatrix } from "@/lib/auth/permissions";
 import { EDITABLE_ROLES } from "@/lib/auth/can";
 import { getTaskScopeMatrix } from "@/lib/tasks/visibility";
 import { listSuperAdmins, listPromotableEmployees, type AdminRow } from "@/lib/admins/data";
+import { parseWorkWeek } from "@/lib/leave/work-week";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { OrgTabs } from "@/components/org/org-tabs";
@@ -49,6 +50,7 @@ export default async function OrganizationPage() {
         where: { id: session.companyId },
         select: {
           multiLocation: true,
+          workWeek: true,
           eventReminderEnabled: true,
           eventReminderTime: true,
           name: true,
@@ -111,6 +113,7 @@ export default async function OrganizationPage() {
           enabled: company?.eventReminderEnabled ?? false,
           time: company?.eventReminderTime ?? "09:00",
         }}
+        workWeek={parseWorkWeek(company?.workWeek)}
         accessMatrix={accessMatrix}
         taskScopes={taskScopes}
         admins={admins}
