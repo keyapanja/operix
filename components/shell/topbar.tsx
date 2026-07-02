@@ -82,6 +82,14 @@ export function Topbar({
                 <Icon name="users" className="size-4" />
                 My profile
               </Link>
+              <Link
+                href="/profile/notifications"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-content hover:bg-canvas"
+              >
+                <Icon name="bell" className="size-4" />
+                Notification settings
+              </Link>
               <form action={logoutAction}>
                 <button
                   type="submit"
