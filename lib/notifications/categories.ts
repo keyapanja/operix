@@ -46,13 +46,16 @@ export function categorize(type: string): NoteCategory {
 // map. "General" never emails. Kept here so server (notify) and client (the
 // settings UI) share one definition.
 
+// Order shown in the email-preferences UI. "Attendance" is intentionally
+// omitted for now (attendance isn't tracked on the platform yet) — it stays in
+// the type/defaults below so any stray attendance notification still defaults to
+// no email; add it back here to expose the toggle.
 export const EMAILABLE_CATEGORIES: Exclude<NoteCategory, "General">[] = [
   "Tasks",
   "Mentions",
   "Leave",
   "Payroll",
   "Clients",
-  "Attendance",
   "Announcements",
   "Forms",
 ];
