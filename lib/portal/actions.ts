@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requirePortalAction } from "@/lib/auth/guard";
 import { logTaskActivity } from "@/lib/activity";
+import { notify } from "@/lib/notifications/notify";
 
 export type PortalActionState = { ok?: boolean; error?: string };
 
@@ -18,9 +19,8 @@ async function notifyInternal(
 ) {
   const targets = [...new Set(userIds.filter((u): u is string => !!u))];
   if (!targets.length) return;
-  await prisma.notification.createMany({
-    data: targets.map((userId) => ({ userId, type, title, body, meta })),
-  });
+  // Central fan-out: in-app bell + Web Push + (pref-gated) email.
+  await notify(targets, { type, title, body, meta });
 }
 
 // ---- Tasks in CLIENT_REVIEW ------------------------------------------------

@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { nowInZone, dateAtUTC } from "@/lib/dates";
+import { notify } from "@/lib/notifications/notify";
 
 function addDaysISO(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -26,9 +27,8 @@ export async function notifyAllInternal(
 ): Promise<void> {
   const ids = await internalUserIds(companyId);
   if (!ids.length) return;
-  await prisma.notification.createMany({
-    data: ids.map((userId) => ({ userId, type, title, body, meta })),
-  });
+  // Central fan-out: in-app bell + Web Push + (pref-gated) email.
+  await notify(ids, { type, title, body, meta });
 }
 
 /**

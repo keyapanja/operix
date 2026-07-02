@@ -360,6 +360,8 @@ model User {
   nickname     String?
   avatarUrl    String? // image URL — real uploads land in Phase 2 file storage
   bio          String?
+  // Per-category email opt-in map (keyed by NoteCategory). null = use defaults.
+  emailPrefs   Json?
   // Invite / set-password flow:
   setupToken          String?   @unique
   setupTokenExpiresAt DateTime?

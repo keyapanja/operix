@@ -10,6 +10,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { remainingForType } from "@/lib/leave/balance";
 import { dateAtUTC } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
+import { notify } from "@/lib/notifications/notify";
 
 export type LeaveState = { error?: string; ok?: boolean };
 const LEAVE = "/leave";
@@ -18,9 +19,8 @@ const LEAVE = "/leave";
 async function notifyUsers(userIds: string[], title: string, body: string): Promise<void> {
   const targets = [...new Set(userIds)].filter(Boolean);
   if (!targets.length) return;
-  await prisma.notification.createMany({
-    data: targets.map((userId) => ({ userId, type: "LEAVE", title, body })),
-  });
+  // Central fan-out: in-app bell + Web Push + (pref-gated) email.
+  await notify(targets, { type: "LEAVE", title, body });
 }
 
 /** Active users whose role can approve leave (admins / HR / team leads / configured). */

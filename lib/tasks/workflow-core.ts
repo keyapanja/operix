@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { logTaskActivity, actorLabel } from "@/lib/activity";
 import { finalizeAllTaskTimers } from "@/lib/timer/finalize";
 import { normalizeHttpUrl, looksLikeUrl } from "@/lib/url";
+import { notify } from "@/lib/notifications/notify";
 
 // Session-agnostic "submit for review" — shared by the web Server Action
 // (lib/tasks/workflow.ts) and the extension API. The worker submits a final
@@ -49,14 +50,11 @@ export async function submitForReviewFor(
 
   const actor = await actorLabel(session.userId);
   if (task.createdById && task.createdById !== session.userId) {
-    await prisma.notification.create({
-      data: {
-        userId: task.createdById,
-        type: "TASK",
-        title: "Task ready for review",
-        body: `${actor} submitted “${task.name}” for review`,
-        meta: { taskId },
-      },
+    await notify([task.createdById], {
+      type: "TASK",
+      title: "Task ready for review",
+      body: `${actor} submitted “${task.name}” for review`,
+      meta: { taskId },
     });
   }
   await logTaskActivity(session, taskId, "submitted the work for review");

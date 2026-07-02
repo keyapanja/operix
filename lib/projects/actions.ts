@@ -14,6 +14,7 @@ import { canEditTask, toggleChecklistItemFor } from "@/lib/projects/task-access"
 import { TASK_STATUS_LABEL } from "@/lib/status";
 import { deleteUpload } from "@/lib/uploads";
 import { notifyTaskAssigned } from "@/lib/tasks/assign-notify";
+import { notify } from "@/lib/notifications/notify";
 
 export type ProjectState = { error?: string; ok?: boolean; id?: string };
 
@@ -666,15 +667,16 @@ export async function addComment(taskId: string, body: string): Promise<ProjectS
     (p) => p.user && p.user.id !== session.userId && text.includes(`@${p.fullName}`),
   );
   if (mentioned.length) {
-    await prisma.notification.createMany({
-      data: mentioned.map((p) => ({
-        userId: p.user!.id,
+    // Central fan-out: in-app bell + Web Push + (pref-gated) email.
+    await notify(
+      mentioned.map((p) => p.user!.id),
+      {
         type: "MENTION",
         title: "You were mentioned",
         body: `${actor} mentioned you in a comment on “${task.name}”`,
         meta: { taskId },
-      })),
-    });
+      },
+    );
   }
 
   await logActivity({

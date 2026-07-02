@@ -7,6 +7,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { logTaskActivity, actorLabel } from "@/lib/activity";
 import { finalizeTaskTimer, finalizeAllTaskTimers } from "@/lib/timer/finalize";
 import { submitForReviewFor } from "@/lib/tasks/workflow-core";
+import { notify as notifyUsers } from "@/lib/notifications/notify";
 
 export type WorkflowState = { ok?: boolean; error?: string };
 
@@ -37,9 +38,8 @@ function assigneeUserIds(task: LoadedTask): string[] {
 async function notify(userIds: string[], title: string, body: string, taskId: string, exclude?: string) {
   const targets = [...new Set(userIds)].filter((u) => u !== exclude);
   if (targets.length === 0) return;
-  await prisma.notification.createMany({
-    data: targets.map((userId) => ({ userId, type: "TASK", title, body, meta: { taskId } })),
-  });
+  // Central fan-out: in-app bell + Web Push + (pref-gated) email.
+  await notifyUsers(targets, { type: "TASK", title, body, meta: { taskId } });
 }
 
 async function ctx(session: Sess, task: LoadedTask) {

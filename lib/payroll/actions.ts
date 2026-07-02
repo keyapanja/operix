@@ -9,6 +9,7 @@ import { dateAtUTC } from "@/lib/dates";
 import { formatINR, periodLabel } from "@/lib/format";
 import { computePayslip, salaryFromEarnings, type LineItem, type PtSlab, type StatutoryFlags } from "@/lib/payroll/calc";
 import { computeLop } from "@/lib/payroll/lop";
+import { notify } from "@/lib/notifications/notify";
 
 export type ActionState = { error?: string; ok?: boolean; message?: string; runId?: string };
 
@@ -299,16 +300,20 @@ export async function markPayrollRunPaid(runId: string): Promise<ActionState> {
   // Notify each employee their payslip is ready, deep-linking to it.
   try {
     const label = periodLabel(run.periodYear, run.periodMonth);
-    const notes = run.payslips
-      .filter((p) => p.employee.user?.id)
-      .map((p) => ({
-        userId: p.employee.user!.id,
-        type: "PAYROLL_PAID",
-        title: "Payslip ready",
-        body: `Your payslip for ${label} is ready. Net pay ${formatINR(p.netPaise)}.`,
-        meta: asJson({ payslipId: p.id }),
-      }));
-    if (notes.length) await prisma.notification.createMany({ data: notes });
+    // Each payslip deep-links to its own row, so notify per employee (in-app
+    // bell + Web Push + pref-gated email).
+    await Promise.all(
+      run.payslips
+        .filter((p) => p.employee.user?.id)
+        .map((p) =>
+          notify([p.employee.user!.id], {
+            type: "PAYROLL_PAID",
+            title: "Payslip ready",
+            body: `Your payslip for ${label} is ready. Net pay ${formatINR(p.netPaise)}.`,
+            meta: { payslipId: p.id },
+          }),
+        ),
+    );
   } catch (e) {
     console.error("[payroll] notify employees (paid) failed:", e);
   }

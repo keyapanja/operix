@@ -134,6 +134,39 @@ export async function sendTaskAssignedEmail(opts: {
   return sendMail({ to: opts.to, subject: `New task assigned: ${opts.taskName}`, html });
 }
 
+/**
+ * Generic branded email for an in-app notification. Used by the central notify()
+ * fan-out so every notification type can reach people by email (gated by their
+ * per-category email preferences). Title/body mirror the in-app notification.
+ */
+export async function sendNotificationEmail(opts: {
+  to: string;
+  name: string | null;
+  title: string;
+  body: string | null;
+  link: string;
+}): Promise<{ delivered: boolean }> {
+  const greeting = opts.name ? `Hi ${escapeHtml(opts.name)},` : "Hi,";
+  const html = `
+  <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
+    <h2 style="color:#059669;margin:0 0 8px">${escapeHtml(opts.title)}</h2>
+    <p style="color:#334155;font-size:14px;line-height:1.6;margin:0 0 4px">${greeting}</p>
+    ${opts.body ? `<p style="color:#334155;font-size:14px;line-height:1.6;margin:0">${escapeHtml(opts.body)}</p>` : ""}
+    <p style="margin:24px 0">
+      <a href="${opts.link}" style="background:#059669;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;display:inline-block">
+        Open in Oprix
+      </a>
+    </p>
+    <p style="color:#94a3b8;font-size:12px;line-height:1.6">
+      You're getting this because of your email notification settings. Change what
+      you're emailed about in Oprix under Notifications.<br>
+      If the button doesn't work, copy this URL:<br>
+      <span style="color:#475569">${opts.link}</span>
+    </p>
+  </div>`;
+  return sendMail({ to: opts.to, subject: opts.title, html });
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,

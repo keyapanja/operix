@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { notify } from "@/lib/notifications/notify";
 
 /**
  * Notifies attendance managers that employees haven't logged in yet. One
@@ -39,15 +40,13 @@ export async function notifyLateLogins(
         data: { title, body, isRead: false },
       });
     } else {
-      await prisma.notification.create({
-        data: {
-          userId: a.id,
-          type: "LATE_LOGIN",
-          title,
-          body,
-          channel: "IN_APP",
-          meta: { date: dateISO },
-        },
+      // First alert of the day for this admin — fan out (bell + push + pref-gated
+      // email). Re-runs the same day update in place above (no repeated push).
+      await notify([a.id], {
+        type: "LATE_LOGIN",
+        title,
+        body,
+        meta: { date: dateISO },
       });
     }
   }

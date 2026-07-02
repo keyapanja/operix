@@ -8,6 +8,7 @@ import { sendFormReminders } from "@/lib/forms/notify-cron";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { TimerBar } from "@/components/timer/timer-bar";
+import { PushPrompt } from "@/components/notifications/push-prompt";
 import { noteHref, formatNoteTime, type ClientNote } from "@/lib/notifications/categories";
 import { Toaster } from "@/components/ui/toast";
 import { ConfirmHost } from "@/components/ui/confirm";
@@ -96,6 +97,9 @@ export default async function AppLayout({
         }}
       />
       <div className="flex min-w-0 flex-1 flex-col">
+        {/* Global "enable notifications" nudge — banner above the header + a
+            one-time login prompt. Hidden when push is off/unsupported/blocked. */}
+        <PushPrompt vapidKey={process.env.VAPID_PUBLIC_KEY ?? null} />
         <Topbar
           email={session.email}
           role={session.role}

@@ -3,45 +3,31 @@
 import { useEffect, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import { Icon } from "@/components/ui/icons";
-
-function urlBase64ToUint8Array(base64: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(b64);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
+import {
+  pushSupported,
+  isPushEnabled,
+  fetchVapidKey,
+  enablePush,
+  disablePush,
+} from "@/lib/push/client";
 
 /** Per-device opt-in for Web Push. Hidden when the browser can't do push or the
- *  server has no VAPID key configured. The public key is fetched at runtime. */
+ *  server has no VAPID key configured. Shares its logic with the global
+ *  enable-notifications banner via lib/push/client. */
 export function PushToggle() {
   const [vapid, setVapid] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const apiOk =
-      typeof window !== "undefined" &&
-      "serviceWorker" in navigator &&
-      "PushManager" in window &&
-      "Notification" in window;
-    if (!apiOk) return;
+    if (!pushSupported()) return;
     let cancelled = false;
     (async () => {
-      try {
-        const r = await fetch("/api/push/key");
-        if (!r.ok) return;
-        const d = await r.json();
-        const key = typeof d?.key === "string" ? d.key : null;
-        if (!key || cancelled) return;
-        setVapid(key);
-        const reg = await navigator.serviceWorker.getRegistration();
-        const sub = reg ? await reg.pushManager.getSubscription() : null;
-        if (!cancelled) setEnabled(!!sub && Notification.permission === "granted");
-      } catch {
-        /* push not available */
-      }
+      const key = await fetchVapidKey();
+      if (!key || cancelled) return;
+      setVapid(key);
+      const on = await isPushEnabled();
+      if (!cancelled) setEnabled(on);
     })();
     return () => {
       cancelled = true;
@@ -51,55 +37,27 @@ export function PushToggle() {
   async function enable() {
     if (!vapid) return;
     setBusy(true);
-    try {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") {
-        toast.error("Notification permission was denied.");
-        return;
-      }
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapid) as BufferSource,
-      });
-      const r = await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sub),
-      });
-      if (!r.ok) {
-        toast.error("Couldn't enable push notifications.");
-        return;
-      }
+    const res = await enablePush(vapid);
+    setBusy(false);
+    if (res === "ok") {
       setEnabled(true);
       toast.success("Push notifications enabled on this device");
-    } catch {
+    } else if (res === "denied") {
+      toast.error("Notification permission was denied.");
+    } else {
       toast.error("Couldn't enable push notifications.");
-    } finally {
-      setBusy(false);
     }
   }
 
   async function disable() {
     setBusy(true);
-    try {
-      const reg = await navigator.serviceWorker.getRegistration();
-      const sub = reg ? await reg.pushManager.getSubscription() : null;
-      if (sub) {
-        await fetch("/api/push/unsubscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: sub.endpoint }),
-        });
-        await sub.unsubscribe();
-      }
+    const ok = await disablePush();
+    setBusy(false);
+    if (ok) {
       setEnabled(false);
       toast.success("Push notifications disabled on this device");
-    } catch {
+    } else {
       toast.error("Couldn't disable push notifications.");
-    } finally {
-      setBusy(false);
     }
   }
 

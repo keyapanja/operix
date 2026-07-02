@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
+import { EMAILABLE_CATEGORIES } from "@/lib/notifications/categories";
 
 /**
  * Mark notifications read. With no ids, marks all of the user's unread ones;
@@ -18,6 +19,26 @@ export async function markNotificationsRead(ids?: string[]): Promise<{ ok: boole
       ...(ids && ids.length ? { id: { in: ids } } : {}),
     },
     data: { isRead: true },
+  });
+  revalidatePath("/notifications");
+  return { ok: true };
+}
+
+/**
+ * Save the signed-in user's per-category email preferences. Only known
+ * categories are accepted; each is coerced to a boolean, so the stored map is
+ * always complete and well-formed.
+ */
+export async function updateEmailPrefs(
+  prefs: Record<string, boolean>,
+): Promise<{ ok: boolean }> {
+  const session = await getSession();
+  if (!session) return { ok: false };
+  const clean: Record<string, boolean> = {};
+  for (const cat of EMAILABLE_CATEGORIES) clean[cat] = !!prefs[cat];
+  await prisma.user.update({
+    where: { id: session.userId },
+    data: { emailPrefs: clean },
   });
   revalidatePath("/notifications");
   return { ok: true };

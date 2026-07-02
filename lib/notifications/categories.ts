@@ -40,6 +40,70 @@ export function categorize(type: string): NoteCategory {
   return "General";
 }
 
+// ---- Email preferences ----------------------------------------------------
+// Which categories can send an email, plus per-category copy + defaults. Users
+// opt in/out per category; `emailPrefs` on the User is a { [category]: boolean }
+// map. "General" never emails. Kept here so server (notify) and client (the
+// settings UI) share one definition.
+
+export const EMAILABLE_CATEGORIES: Exclude<NoteCategory, "General">[] = [
+  "Tasks",
+  "Mentions",
+  "Leave",
+  "Payroll",
+  "Clients",
+  "Attendance",
+  "Announcements",
+  "Forms",
+];
+
+export const EMAIL_CATEGORY_META: Record<
+  Exclude<NoteCategory, "General">,
+  { label: string; description: string }
+> = {
+  Tasks: { label: "Task assignments & updates", description: "When a task is assigned to you or its status changes." },
+  Mentions: { label: "Mentions", description: "When someone @mentions you in a comment." },
+  Leave: { label: "Leave", description: "Leave requests awaiting your approval, and decisions on your own." },
+  Payroll: { label: "Payroll", description: "When your payslip is ready." },
+  Clients: { label: "Client activity", description: "Client approvals, feedback and deliverable decisions." },
+  Attendance: { label: "Attendance", description: "Late-login and attendance alerts (admins)." },
+  Announcements: { label: "Announcements", description: "Company announcements and event reminders." },
+  Forms: { label: "Form reminders", description: "Scheduled reminders to fill out a form." },
+};
+
+/** Default email opt-in per category — high-signal personal ones on, noisy ones off. */
+export const EMAIL_DEFAULTS: Record<NoteCategory, boolean> = {
+  Tasks: true,
+  Mentions: true,
+  Leave: true,
+  Payroll: true,
+  Clients: false,
+  Attendance: false,
+  Announcements: false,
+  Forms: false,
+  General: false,
+};
+
+/** Should a notification of this `type` be emailed to a user with these prefs? */
+export function emailEnabled(prefs: unknown, type: string): boolean {
+  const cat = categorize(type);
+  if (cat === "General") return false;
+  const p = (prefs && typeof prefs === "object" ? prefs : {}) as Record<string, unknown>;
+  const v = p[cat];
+  return typeof v === "boolean" ? v : EMAIL_DEFAULTS[cat];
+}
+
+/** Normalize an arbitrary prefs object into a full, sanitized category→bool map. */
+export function normalizeEmailPrefs(prefs: unknown): Record<Exclude<NoteCategory, "General">, boolean> {
+  const p = (prefs && typeof prefs === "object" ? prefs : {}) as Record<string, unknown>;
+  const out = {} as Record<Exclude<NoteCategory, "General">, boolean>;
+  for (const cat of EMAILABLE_CATEGORIES) {
+    const v = p[cat];
+    out[cat] = typeof v === "boolean" ? v : EMAIL_DEFAULTS[cat];
+  }
+  return out;
+}
+
 export type CategoryStyle = {
   icon: string;
   dot: string; // small status dot bg
