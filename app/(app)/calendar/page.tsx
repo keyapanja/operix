@@ -41,6 +41,23 @@ export default async function CalendarPage({
   // announcements) only. (Calendar apply-leave code is kept but never enabled.)
   const canApplyLeave = false;
 
+  // Everyone sees WHO is away (by name) in the grid, but the leave *type* and
+  // the full "On leave this month" breakdown are Super Admin only — so strip
+  // them from the payload for everyone else rather than just hiding in the UI.
+  const isSuperAdmin = session.role === "SUPER_ADMIN";
+  const viewData = isSuperAdmin
+    ? data
+    : {
+        ...data,
+        leaves: [],
+        byDay: Object.fromEntries(
+          Object.entries(data.byDay).map(([k, c]) => [
+            k,
+            { ...c, away: c.away.map((a) => ({ ...a, type: null })) },
+          ]),
+        ),
+      };
+
   return (
     <>
       <PageHeader
@@ -50,13 +67,13 @@ export default async function CalendarPage({
       {canManage && <CalendarAdminControls />}
       <CalendarView
         ym={ym}
-        data={data}
+        data={viewData}
         today={todayISO}
         currentYm={currentYm}
         canManage={canManage}
         canApplyLeave={canApplyLeave}
         currentUserId={session.userId}
-        isSuperAdmin={session.role === "SUPER_ADMIN"}
+        isSuperAdmin={isSuperAdmin}
         balances={balances.map((b) => ({
           typeId: b.typeId,
           name: b.name,
