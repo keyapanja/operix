@@ -3,6 +3,7 @@ import { requirePage } from "@/lib/auth/guard";
 import { hasPermission, getAccessMatrix } from "@/lib/auth/permissions";
 import { EDITABLE_ROLES } from "@/lib/auth/can";
 import { getTaskScopeMatrix } from "@/lib/tasks/visibility";
+import { listSuperAdmins, listPromotableEmployees, type AdminRow } from "@/lib/admins/data";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { OrgTabs } from "@/components/org/org-tabs";
@@ -66,6 +67,15 @@ export default async function OrganizationPage() {
   const accessMatrix = canManageRoles ? await getAccessMatrix(session.companyId) : null;
   const taskScopes = canManageRoles ? await getTaskScopeMatrix(session.companyId, EDITABLE_ROLES) : null;
 
+  // Super Admin access management is Super-Admin-only (they manage other admins).
+  const isSuperAdmin = session.role === "SUPER_ADMIN";
+  const [admins, promotable]: [AdminRow[] | null, { employeeId: string; name: string }[]] = isSuperAdmin
+    ? await Promise.all([
+        listSuperAdmins(session.companyId, session.userId),
+        listPromotableEmployees(session.companyId),
+      ])
+    : [null, []];
+
   return (
     <>
       <PageHeader
@@ -103,6 +113,8 @@ export default async function OrganizationPage() {
         }}
         accessMatrix={accessMatrix}
         taskScopes={taskScopes}
+        admins={admins}
+        promotable={promotable}
       />
     </>
   );

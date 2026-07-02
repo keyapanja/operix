@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { requireCapability } from "@/lib/auth/guard";
 import { sendInviteEmail, appUrl } from "@/lib/email";
 import { nextEmployeeCode } from "@/lib/employees/code";
+import { getPrimaryAdminUserId } from "@/lib/admins/data";
 
 export type EmployeeFormState = { error?: string; ok?: boolean };
 
@@ -233,6 +234,13 @@ export async function setEmployeeRole(employeeId: string, role: Role): Promise<E
   // Only a Super Admin may grant or remove the Super Admin role.
   if ((role === "SUPER_ADMIN" || employee.user.role === "SUPER_ADMIN") && session.role !== "SUPER_ADMIN") {
     return { error: "Only a Super Admin can assign or change the Super Admin role." };
+  }
+
+  // The primary admin (original Super Admin) is the source of truth for admins
+  // and can't be demoted here — manage admins from Organization → Admins.
+  if (employee.user.role === "SUPER_ADMIN") {
+    const primaryId = await getPrimaryAdminUserId(session.companyId);
+    if (employee.user.id === primaryId) return { error: "The primary admin's role can't be changed." };
   }
 
   await prisma.user.update({ where: { id: employee.user.id }, data: { role } });

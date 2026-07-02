@@ -15,6 +15,7 @@ import { ShiftEdit } from "@/components/org/shift-edit";
 import { ServiceList } from "@/components/org/service-list";
 import { PermissionsMatrix } from "@/components/org/permissions-matrix";
 import { TaskScopeMatrix } from "@/components/org/task-scope-matrix";
+import { AdminsPanel } from "@/components/org/admins-panel";
 import { CompanyInfoForm, type CompanyInfo } from "@/components/org/company-info-form";
 import { DepartmentHead } from "@/components/org/department-head";
 import { BulkSubcategoryForm } from "@/components/org/bulk-subcategory-form";
@@ -59,6 +60,8 @@ export function OrgTabs({
   eventReminder,
   accessMatrix,
   taskScopes,
+  admins,
+  promotable,
 }: {
   company: CompanyInfo;
   departments: Dept[];
@@ -72,6 +75,8 @@ export function OrgTabs({
   eventReminder: { enabled: boolean; time: string };
   accessMatrix: Record<string, string[]> | null;
   taskScopes: Record<string, string> | null;
+  admins: { userId: string; name: string; email: string; isPrimary: boolean; isSelf: boolean }[] | null;
+  promotable: { employeeId: string; name: string }[];
 }) {
   const [tab, setTab] = useState<string>("Company");
   const deptOptions = departments.map((d) => ({ value: d.id, label: d.name }));
@@ -80,6 +85,7 @@ export function OrgTabs({
     .filter((s) => !s.parentId)
     .map((s) => ({ value: s.id, label: s.name }));
   const tabs = [...BASE_TABS];
+  if (admins) tabs.push("Admins");
   if (accessMatrix) tabs.push("Access");
   if (taskScopes) tabs.push("Task access");
 
@@ -271,6 +277,8 @@ export function OrgTabs({
           }))}
         />
       )}
+
+      {tab === "Admins" && admins && <AdminsPanel admins={admins} promotable={promotable} />}
 
       {tab === "Access" && accessMatrix && <PermissionsMatrix initial={accessMatrix} />}
 
